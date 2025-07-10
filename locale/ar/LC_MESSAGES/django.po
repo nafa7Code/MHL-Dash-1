@@ -1,0 +1,554 @@
+# Arabic translation for MHL Logistics
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
+
+msgid "Dashboard"
+msgstr "لوحة التحكم"
+
+msgid "Sellers"
+msgstr "البائعون"
+
+msgid "Bills"
+msgstr "الفواتير"
+
+msgid "Orders"
+msgstr "الطلبات"
+
+msgid "Omniful Sync"
+msgstr "مزامنة أومنيفول"
+
+msgid "Profile"
+msgstr "الملف الشخصي"
+
+msgid "Logout"
+msgstr "تسجيل الخروج"
+
+msgid "Login"
+msgstr "تسجيل الدخول"
+
+msgid "Administration"
+msgstr "الإدارة"
+
+msgid "Users"
+msgstr "المستخدمون"
+
+msgid "Admin Panel"
+msgstr "لوحة الإدارة"
+
+msgid "MHL Logistics"
+msgstr "إم إتش إل للخدمات اللوجستية"
+
+msgid "Total Sellers"
+msgstr "إجمالي البائعين"
+
+msgid "Total Bills"
+msgstr "إجمالي الفواتير"
+
+msgid "Total Orders"
+msgstr "إجمالي الطلبات"
+
+msgid "Recent Sellers"
+msgstr "البائعون الحديثون"
+
+msgid "Recent Bills"
+msgstr "الفواتير الحديثة"
+
+msgid "Recent Orders"
+msgstr "الطلبات الحديثة"
+
+msgid "Quick Actions"
+msgstr "الإجراءات السريعة"
+
+msgid "View All"
+msgstr "عرض الكل"
+
+msgid "Active"
+msgstr "نشط"
+
+msgid "Inactive"
+msgstr "غير نشط"
+
+msgid "Sellers Dashboard"
+msgstr "لوحة تحكم البائعين"
+
+msgid "Sellers List"
+msgstr "قائمة البائعين"
+
+msgid "Name"
+msgstr "الاسم"
+
+msgid "Code"
+msgstr "الرمز"
+
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+msgid "Phone"
+msgstr "الهاتف"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Created"
+msgstr "تاريخ الإنشاء"
+
+msgid "Actions"
+msgstr "الإجراءات"
+
+msgid "View Details"
+msgstr "عرض التفاصيل"
+
+msgid "Bill Name"
+msgstr "اسم الفاتورة"
+
+msgid "Seller"
+msgstr "البائع"
+
+msgid "Grand Total"
+msgstr "المجموع الكلي"
+
+msgid "Currency"
+msgstr "العملة"
+
+msgid "Refresh Data"
+msgstr "تحديث البيانات"
+
+msgid "Vendor Bills"
+msgstr "فواتير الموردين"
+
+msgid "Orders Dashboard"
+msgstr "لوحة تحكم الطلبات"
+
+msgid "Order ID"
+msgstr "رقم الطلب"
+
+msgid "Type"
+msgstr "النوع"
+
+msgid "Total"
+msgstr "المجموع"
+
+msgid "Customer Analytics"
+msgstr "تحليلات العملاء"
+
+msgid "Order Detail"
+msgstr "تفاصيل الطلب"
+
+msgid "Customer"
+msgstr "العميل"
+
+msgid "Amount"
+msgstr "المبلغ"
+
+msgid "Date"
+msgstr "التاريخ"
+
+msgid "Payment Mode"
+msgstr "طريقة الدفع"
+
+msgid "Delivery Status"
+msgstr "حالة التسليم"
+
+msgid "Order Type"
+msgstr "نوع الطلب"
+
+msgid "City"
+msgstr "المدينة"
+
+msgid "Region"
+msgstr "المنطقة"
+
+msgid "Country"
+msgstr "البلد"
+
+msgid "New Order"
+msgstr "طلب جديد"
+
+msgid "Processing"
+msgstr "قيد المعالجة"
+
+msgid "Shipped"
+msgstr "تم الشحن"
+
+msgid "Delivered"
+msgstr "تم التسليم"
+
+msgid "Cancelled"
+msgstr "ملغي"
+
+msgid "Sync Sellers"
+msgstr "مزامنة البائعين"
+
+msgid "Import Bills"
+msgstr "استيراد الفواتير"
+
+msgid "Sync Orders"
+msgstr "مزامنة الطلبات"
+
+msgid "Sync All Orders"
+msgstr "مزامنة جميع الطلبات"
+
+msgid "Syncing..."
+msgstr "جاري المزامنة..."
+
+msgid "Starting..."
+msgstr "جاري البدء..."
+
+msgid "Importing..."
+msgstr "جاري الاستيراد..."
+
+msgid "Fix Dates"
+msgstr "إصلاح التواريخ"
+
+msgid "Sellers synced successfully."
+msgstr "تم مزامنة البائعين بنجاح."
+
+msgid "Bills synced successfully."
+msgstr "تم مزامنة الفواتير بنجاح."
+
+msgid "Orders synced successfully for all sellers."
+msgstr "تم مزامنة الطلبات بنجاح لجميع البائعين."
+
+msgid "Orders synced successfully for seller {}."
+msgstr "تم مزامنة الطلبات بنجاح للبائع {}."
+
+msgid "Error syncing sellers: {}"
+msgstr "خطأ في مزامنة البائعين: {}"
+
+msgid "Error syncing bills: {}"
+msgstr "خطأ في مزامنة الفواتير: {}"
+
+msgid "Error syncing orders: {}"
+msgstr "خطأ في مزامنة الطلبات: {}"
+
+msgid "Full order sync started for all sellers. This may take some time."
+msgstr "بدأت مزامنة الطلبات الكاملة لجميع البائعين. قد يستغرق هذا بعض الوقت."
+
+msgid "Full order sync started for seller {}. This may take some time."
+msgstr "بدأت مزامنة الطلبات الكاملة للبائع {}. قد يستغرق هذا بعض الوقت."
+
+msgid "Error starting order sync: {}"
+msgstr "خطأ في بدء مزامنة الطلبات: {}"
+
+msgid "Orders Sync Progress"
+msgstr "تقدم مزامنة الطلبات"
+
+msgid "Overall Progress"
+msgstr "التقدم العام"
+
+msgid "Orders Processed"
+msgstr "الطلبات المعالجة"
+
+msgid "Sellers Progress"
+msgstr "تقدم البائعين"
+
+msgid "Sellers Processed"
+msgstr "البائعون المعالجون"
+
+msgid "Current Status"
+msgstr "الحالة الحالية"
+
+msgid "Current Seller:"
+msgstr "البائع الحالي:"
+
+msgid "Current Page:"
+msgstr "الصفحة الحالية:"
+
+msgid "Complete"
+msgstr "مكتمل"
+
+msgid "In Progress"
+msgstr "قيد التنفيذ"
+
+msgid "Sync process completed successfully!"
+msgstr "تمت عملية المزامنة بنجاح!"
+
+msgid "Sync process is running. This page will automatically update."
+msgstr "عملية المزامنة قيد التشغيل. ستتحدث هذه الصفحة تلقائياً."
+
+msgid "View Orders Dashboard"
+msgstr "عرض لوحة تحكم الطلبات"
+
+msgid "Loading..."
+msgstr "جاري التحميل..."
+
+msgid "Please wait while orders are being synced..."
+msgstr "يرجى الانتظار أثناء مزامنة الطلبات..."
+
+msgid "Search"
+msgstr "بحث"
+
+msgid "Filter"
+msgstr "تصفية"
+
+msgid "Export"
+msgstr "تصدير"
+
+msgid "Import"
+msgstr "استيراد"
+
+msgid "Save"
+msgstr "حفظ"
+
+msgid "Cancel"
+msgstr "إلغاء"
+
+msgid "Delete"
+msgstr "حذف"
+
+msgid "Edit"
+msgstr "تعديل"
+
+msgid "Add"
+msgstr "إضافة"
+
+msgid "Update"
+msgstr "تحديث"
+
+msgid "Refresh"
+msgstr "تحديث"
+
+msgid "Back"
+msgstr "رجوع"
+
+msgid "Next"
+msgstr "التالي"
+
+msgid "Previous"
+msgstr "السابق"
+
+msgid "Yes"
+msgstr "نعم"
+
+msgid "No"
+msgstr "لا"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Submit"
+msgstr "إرسال"
+
+msgid "Reset"
+msgstr "إعادة تعيين"
+
+msgid "Today"
+msgstr "اليوم"
+
+msgid "Yesterday"
+msgstr "أمس"
+
+msgid "This Week"
+msgstr "هذا الأسبوع"
+
+msgid "This Month"
+msgstr "هذا الشهر"
+
+msgid "Last Month"
+msgstr "الشهر الماضي"
+
+msgid "This Year"
+msgstr "هذا العام"
+
+msgid "Last Year"
+msgstr "العام الماضي"
+
+msgid "No data found."
+msgstr "لم يتم العثور على بيانات."
+
+msgid "No sellers found."
+msgstr "لم يتم العثور على بائعين."
+
+msgid "No bills found."
+msgstr "لم يتم العثور على فواتير."
+
+msgid "No orders found."
+msgstr "لم يتم العثور على طلبات."
+
+msgid "An error occurred."
+msgstr "حدث خطأ."
+
+msgid "Please try again."
+msgstr "يرجى المحاولة مرة أخرى."
+
+msgid "Toggle Theme"
+msgstr "تبديل المظهر"
+
+msgid "Language"
+msgstr "اللغة"
+
+msgid "English"
+msgstr "الإنجليزية"
+
+msgid "Arabic"
+msgstr "العربية"
+
+msgid "Logistics Management System"
+msgstr "نظام إدارة الخدمات اللوجستية"
+
+msgid "Omniful API Sync"
+msgstr "مزامنة واجهة برمجة تطبيقات أومنيفول"
+
+msgid "Sync sellers from Omniful API"
+msgstr "مزامنة البائعين من واجهة برمجة تطبيقات أومنيفول"
+
+msgid "Import bills from Omniful API"
+msgstr "استيراد الفواتير من واجهة برمجة تطبيقات أومنيفول"
+
+msgid "Sync orders from Omniful API"
+msgstr "مزامنة الطلبات من واجهة برمجة تطبيقات أومنيفول"
+
+msgid "No data synced yet"
+msgstr "لم يتم مزامنة أي بيانات بعد"
+
+msgid "Start by syncing sellers and importing bills from Omniful API."
+msgstr "ابدأ بمزامنة البائعين واستيراد الفواتير من واجهة برمجة تطبيقات أومنيفول."
+
+msgid "Profile updated successfully."
+msgstr "تم تحديث الملف الشخصي بنجاح."
+
+msgid "First Name"
+msgstr "الاسم الأول"
+
+msgid "Last Name"
+msgstr "اسم العائلة"
+
+msgid "Department"
+msgstr "القسم"
+
+msgid "Preferred Language"
+msgstr "اللغة المفضلة"
+
+msgid "KPI Dashboard"
+msgstr "لوحة تحكم مؤشرات الأداء"
+
+msgid "Analytics"
+msgstr "التحليلات"
+
+msgid "Performance"
+msgstr "الأداء"
+
+msgid "Metrics"
+msgstr "المقاييس"
+
+msgid "Statistics"
+msgstr "الإحصائيات"
+
+msgid "Reports"
+msgstr "التقارير"
+
+msgid "Summary"
+msgstr "الملخص"
+
+msgid "Overview"
+msgstr "نظرة عامة"
+
+msgid "Sellers KPI Dashboard"
+msgstr "لوحة تحكم مؤشرات أداء البائعين"
+
+msgid "Key performance indicators and seller metrics"
+msgstr "مؤشرات الأداء الرئيسية ومقاييس البائعين"
+
+msgid "View All Sellers"
+msgstr "عرض جميع البائعين"
+
+msgid "View All Bills"
+msgstr "عرض جميع الفواتير"
+
+msgid "Unpaid Sellers"
+msgstr "البائعون غير المدفوعين"
+
+msgid "Bills with Data"
+msgstr "الفواتير التي تحتوي على بيانات"
+
+msgid "Top Seller"
+msgstr "أفضل بائع"
+
+msgid "Most Active Seller"
+msgstr "البائع الأكثر نشاطاً"
+
+msgid "Average Bill"
+msgstr "متوسط الفاتورة"
+
+msgid "Last Paid Bill"
+msgstr "آخر فاتورة مدفوعة"
+
+msgid "Oldest Unpaid Bill"
+msgstr "أقدم فاتورة غير مدفوعة"
+
+msgid "Top 10 Sellers by Revenue"
+msgstr "أفضل 10 بائعين حسب الإيرادات"
+
+msgid "Seller Name"
+msgstr "اسم البائع"
+
+msgid "Total Revenue"
+msgstr "إجمالي الإيرادات"
+
+msgid "Bills Count"
+msgstr "عدد الفواتير"
+
+msgid "Average"
+msgstr "المتوسط"
+
+msgid "Manage all sellers and their information"
+msgstr "إدارة جميع البائعين ومعلوماتهم"
+
+msgid "All Sellers"
+msgstr "جميع البائعين"
+
+msgid "All vendor bills from Omniful"
+msgstr "جميع فواتير الموردين من أومنيفول"
+
+msgid "All Bills"
+msgstr "جميع الفواتير"
+
+msgid "Orders KPI Dashboard"
+msgstr "لوحة تحكم مؤشرات أداء الطلبات"
+
+msgid "Key performance indicators for orders"
+msgstr "مؤشرات الأداء الرئيسية للطلبات"
+
+msgid "Filters"
+msgstr "المرشحات"
+
+msgid "From Date"
+msgstr "من تاريخ"
+
+msgid "To Date"
+msgstr "إلى تاريخ"
+
+msgid "Avg. Delivery Days"
+msgstr "متوسط أيام التسليم"
+
+msgid "Delivery Performance"
+msgstr "أداء التسليم"
+
+msgid "Payment Analysis"
+msgstr "تحليل المدفوعات"
+
+msgid "Count"
+msgstr "العدد"
+
+msgid "Percentage"
+msgstr "النسبة المئوية"
+
+msgid "On-Time Delivery Rate"
+msgstr "معدل التسليم في الوقت المحدد"
+
+msgid "Payment Distribution"
+msgstr "توزيع المدفوعات"
+
+msgid "Order Status"
+msgstr "حالة الطلب"
+
+msgid "Top Regions"
+msgstr "أهم المناطق"
+
+msgid "Recent Vendor Bills"
+msgstr "فواتير الموردين الحديثة"

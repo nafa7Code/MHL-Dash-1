@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Dashboard" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">{% trans "Dashboard" %}</h1>
+    <div class="text-muted">
+        <i class="fas fa-calendar-alt me-1"></i>
+        {% now "F j, Y" %}
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ total_sellers|floatformat:0 }}</div>
+                    <div class="stat-label">{% trans "Total Sellers" %}</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #28a745, #20c997);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ total_bills|floatformat:0 }}</div>
+                    <div class="stat-label">{% trans "Total Bills" %}</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #17a2b8, #6f42c1);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-number">{{ total_orders|floatformat:0 }}</div>
+                    <div class="stat-label">{% trans "Total Orders" %}</div>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-shipping-fast"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <!-- Recent Sellers -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans "Recent Sellers" %}</h5>
+                <a href="{% url 'core:sellers_list' %}" class="btn btn-sm btn-outline-primary">
+                    {% trans "View All" %}
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_sellers %}
+                <div class="list-group list-group-flush">
+                    {% for seller in recent_sellers %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ seller.name }}</h6>
+                                <small class="text-muted">{{ seller.code }}</small>
+                            </div>
+                            <span class="badge bg-{% if seller.is_active %}success{% else %}secondary{% endif %}">
+                                {% if seller.is_active %}{% trans "Active" %}{% else %}{% trans "Inactive" %}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">{% trans "No sellers found." %}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bills -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans "Recent Bills" %}</h5>
+                <a href="{% url 'core:bills_list' %}" class="btn btn-sm btn-outline-primary">
+                    {% trans "View All" %}
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_bills %}
+                <div class="list-group list-group-flush">
+                    {% for bill in recent_bills %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ bill.name }}</h6>
+                                <small class="text-muted">{{ bill.seller.name }}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">{{ bill.grand_total|floatformat:2 }}</div>
+                                <small class="text-muted">{{ bill.currency }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">{% trans "No bills found." %}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{% trans "Recent Orders" %}</h5>
+                <a href="{% url 'core:orders_dashboard' %}" class="btn btn-sm btn-outline-primary">
+                    {% trans "View All" %}
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_orders %}
+                <div class="list-group list-group-flush">
+                    {% for order in recent_orders %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ order.order_id }}</h6>
+                                <small class="text-muted">{{ order.seller.name }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span
+                                    class="badge bg-{% if order.status_code == 'delivered' %}success{% elif order.status_code == 'processing' %}info{% elif order.status_code == 'shipped' %}warning{% else %}secondary{% endif %}">
+                                    {{ order.status_code }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-shipping-fast fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">{% trans "No orders found." %}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Quick Actions" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'core:sellers_kpi_dashboard' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            {% trans "Sellers Dashboard" %}
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'core:orders_dashboard' %}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-shipping-fast me-2"></i>
+                            {% trans "Orders Dashboard" %}
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'core:omniful_sync' %}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-cloud-download-alt me-2"></i>
+                            {% trans "Omniful Sync" %}
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{% url 'core:customer_orders' %}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-user-friends me-2"></i>
+                            {% trans "Customer Analytics" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

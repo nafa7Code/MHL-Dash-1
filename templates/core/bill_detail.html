@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{{ bill.name }} - {% trans "Bill Details" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{{ bill.name }}</h1>
+        <p class="text-muted mb-0">{% trans "Vendor Bill Details" %}</p>
+    </div>
+    <div class="btn-group">
+        <button class="btn btn-primary refresh-bill-btn" data-bill-name="{{ bill.name }}">
+            <i class="fas fa-sync me-2"></i>{% trans "Refresh from API" %}
+        </button>
+        <a href="{% url 'core:bills_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>{% trans "Back to Bills" %}
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Bill Information" %}</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="fw-bold">{% trans "Bill Name:" %}</td>
+                        <td>{{ bill.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Seller:" %}</td>
+                        <td>
+                            <a href="{% url 'core:seller_detail' bill.seller.guid %}">{{ bill.seller.name }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Status:" %}</td>
+                        <td><span class="badge bg-info">{{ bill.status|default:"Unknown" }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Currency:" %}</td>
+                        <td>{{ bill.currency }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Grand Total:" %}</td>
+                        <td>
+                            {% if bill.grand_total %}
+                                <h5 class="text-success mb-0">${{ bill.grand_total|floatformat:2|intcomma }}</h5>
+                            {% else %}
+                                <span class="text-muted">{% trans "Not available" %}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Discount:" %}</td>
+                        <td>
+                            {% if bill.discount %}
+                                ${{ bill.discount|floatformat:2|intcomma }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Contract:" %}</td>
+                        <td>{{ bill.contract_name|default:"-" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Dates & Timeline" %}</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="fw-bold">{% trans "Period Start:" %}</td>
+                        <td>
+                            {% if bill.period_start_date %}
+                                {{ bill.period_start_date|date:"F j, Y" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Period End:" %}</td>
+                        <td>
+                            {% if bill.period_end_date %}
+                                {{ bill.period_end_date|date:"F j, Y" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Due Date:" %}</td>
+                        <td>
+                            {% if bill.due_date %}
+                                {{ bill.due_date|date:"F j, Y" }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Created:" %}</td>
+                        <td>{{ bill.created_at|date:"F j, Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Finalised On:" %}</td>
+                        <td>{{ bill.finalised_on|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">{% trans "Finalised By:" %}</td>
+                        <td>{{ bill.finalised_by|default:"-" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Collapsible JSON Data Sections -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="accordion" id="billDataAccordion">
+            
+
+            
+            <!-- Fees Section -->
+            {% if bill.fees %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="feesHeading">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#feesCollapse" aria-expanded="true" aria-controls="feesCollapse">
+                        <i class="fas fa-dollar-sign me-2"></i>{% trans "Fees Breakdown" %} ({{ bill.fees|length }})
+                    </button>
+                </h2>
+                <div id="feesCollapse" class="accordion-collapse collapse show" aria-labelledby="feesHeading" 
+                     data-bs-parent="#billDataAccordion">
+                    <div class="accordion-body p-0">
+                        {% for fee_group in bill.fees %}
+                        <div class="fee-section mb-4">
+                            <div class="bg-primary text-white p-3">
+                                <h4 class="mb-0">{{ fee_group.name }}</h4>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped mb-0">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>{% trans "Fee" %}</th>
+                                            <th>{% trans "Label On Bill" %}</th>
+                                            <th class="text-end">{% trans "Fee Per Unit" %}</th>
+                                            <th class="text-end">{% trans "Usage" %}</th>
+                                            <th class="text-end">{% trans "Fees" %}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for rule in fee_group.rules %}
+                                        <tr>
+                                            <td><strong>{{ rule.display_key }}</strong></td>
+                                            <td>{{ rule.label|default:"-" }}</td>
+                                            <td class="text-end">
+                                                {% for cost in rule.costs %}
+                                                {{ cost.display_value }}
+                                                {% endfor %}
+                                            </td>
+                                            <td class="text-end">{{ rule.display_usage }}</td>
+                                            <td class="text-end"><strong>{{ rule.display_total }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="fee-total bg-light p-3 text-end">
+                                <strong>{% trans "Total" %}: {{ fee_group.display_total }} {{ bill.currency }}</strong>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Hub Bills Section -->
+            {% if bill.hub_bills %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="hubBillsHeading">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#hubBillsCollapse" aria-expanded="true" aria-controls="hubBillsCollapse">
+                        <i class="fas fa-file-invoice me-2"></i>{% trans "Hub Bills" %} ({{ bill.hub_bills|length }})
+                    </button>
+                </h2>
+                <div id="hubBillsCollapse" class="accordion-collapse collapse show" aria-labelledby="hubBillsHeading" 
+                     data-bs-parent="#billDataAccordion">
+                    <div class="accordion-body p-0">
+                        {% for hub_bill in bill.hub_bills %}
+                        <div class="mb-4">
+                            <div class="bg-info text-white p-3">
+                                <h4 class="mb-0">{{ hub_bill.hub.name }} ({{ hub_bill.hub.code }})</h4>
+                            </div>
+                            {% for fee_group in hub_bill.fees %}
+                            <div class="fee-section mb-4">
+                                <div class="bg-primary text-white p-3">
+                                    <h4 class="mb-0">{{ fee_group.name }}</h4>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>{% trans "Fee" %}</th>
+                                                <th>{% trans "Label On Bill" %}</th>
+                                                <th class="text-end">{% trans "Fee Per Unit" %}</th>
+                                                <th class="text-end">{% trans "Usage" %}</th>
+                                                <th class="text-end">{% trans "Fees" %}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for rule in fee_group.rules %}
+                                            <tr>
+                                                <td><strong>{{ rule.display_key }}</strong></td>
+                                                <td>{{ rule.label|default:"-" }}</td>
+                                                <td class="text-end">
+                                                    {% for cost in rule.costs %}
+                                                    {{ cost.display_value }}
+                                                    {% endfor %}
+                                                </td>
+                                                <td class="text-end">{{ rule.display_usage }}</td>
+                                                <td class="text-end"><strong>{{ rule.display_total }}</strong></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="fee-total bg-light p-3 text-end">
+                                    <strong>{% trans "Total" %}: {{ fee_group.display_total }} {{ bill.currency }}</strong>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            <div class="hub-total bg-success text-white p-3 text-end">
+                                <h5 class="mb-0">{% trans "Hub Total" %}: {{ hub_bill.display_total }} {{ bill.currency }}</h5>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+        </div>
+        
+        {% if not bill.hubs and not bill.fees and not bill.hub_bills %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-info-circle fa-2x text-muted mb-3"></i>
+                <h5 class="text-muted">{% trans "No detailed data available" %}</h5>
+                <p class="text-muted">{% trans "Click 'Refresh from API' to load detailed bill information." %}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if bill.remark %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Remarks" %}</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ bill.remark }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshButton = document.querySelector('.refresh-bill-btn');
+    
+    if (refreshButton) {
+        refreshButton.addEventListener('click', function() {
+            const billName = this.dataset.billName;
+            const icon = this.querySelector('i');
+            
+            // Show loading state
+            icon.className = 'fas fa-spinner fa-spin';
+            this.disabled = true;
+            
+            fetch(`/api/refresh-bill/${billName}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    LogisticsApp.showToast('success', data.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    LogisticsApp.showToast('error', data.message);
+                }
+            })
+            .catch(error => {
+                LogisticsApp.showToast('error', 'Error refreshing bill');
+            })
+            .finally(() => {
+                // Reset button state
+                icon.className = 'fas fa-sync';
+                this.disabled = false;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

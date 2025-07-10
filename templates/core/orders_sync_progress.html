@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Orders Sync Progress" %} - {{ block.super }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .progress-card {
+        transition: all 0.3s ease;
+    }
+    .progress-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    .progress-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .progress {
+        height: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{% trans "Orders Sync Progress" %}</h1>
+        <p class="text-muted mb-0">{% trans "Syncing orders from Omniful API" %}</p>
+    </div>
+    <div>
+        <a href="{% url 'core:orders_dashboard' %}" class="btn btn-outline-primary">
+            <i class="fas fa-chart-line me-2"></i>{% trans "Orders Dashboard" %}
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card progress-card">
+            <div class="card-body">
+                <h5 class="card-title">{% trans "Overall Progress" %}</h5>
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                         style="width: {{ progress.percentage }}%;" 
+                         aria-valuenow="{{ progress.percentage }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ progress.percentage }}%
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="progress-value">{{ progress.processed_orders|intcomma }}</div>
+                        <div class="progress-label">{% trans "Orders Processed" %}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="progress-value">{{ progress.total_orders|intcomma }}</div>
+                        <div class="progress-label">{% trans "Total Orders" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card progress-card">
+            <div class="card-body">
+                <h5 class="card-title">{% trans "Sellers Progress" %}</h5>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" 
+                         style="width: {% if progress.total_sellers > 0 %}{{ progress.processed_sellers|div:progress.total_sellers|mul:100 }}{% else %}0{% endif %}%;" 
+                         aria-valuenow="{% if progress.total_sellers > 0 %}{{ progress.processed_sellers|div:progress.total_sellers|mul:100 }}{% else %}0{% endif %}" 
+                         aria-valuemin="0" aria-valuemax="100">
+                        {% if progress.total_sellers > 0 %}{{ progress.processed_sellers|div:progress.total_sellers|mul:100|floatformat:0 }}%{% else %}0%{% endif %}
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="progress-value">{{ progress.processed_sellers }}</div>
+                        <div class="progress-label">{% trans "Sellers Processed" %}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="progress-value">{{ progress.total_sellers }}</div>
+                        <div class="progress-label">{% trans "Total Sellers" %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{% trans "Current Status" %}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table">
+                    <tr>
+                        <th>{% trans "Current Seller:" %}</th>
+                        <td>{{ progress.current_seller|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Current Page:" %}</th>
+                        <td>{{ progress.current_page }} / {{ progress.total_pages }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Status:" %}</th>
+                        <td>
+                            {% if progress.is_complete %}
+                            <span class="badge bg-success">{% trans "Complete" %}</span>
+                            {% else %}
+                            <span class="badge bg-info">{% trans "In Progress" %}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <div class="alert {% if progress.is_complete %}alert-success{% else %}alert-info{% endif %}">
+                    {% if progress.is_complete %}
+                    <i class="fas fa-check-circle me-2"></i>
+                    {% trans "Sync process completed successfully!" %}
+                    {% else %}
+                    <i class="fas fa-sync fa-spin me-2"></i>
+                    {% trans "Sync process is running. This page will automatically update." %}
+                    {% endif %}
+                </div>
+                
+                {% if progress.is_complete %}
+                <a href="{% url 'core:orders_dashboard' %}" class="btn btn-primary">
+                    <i class="fas fa-chart-line me-2"></i>{% trans "View Orders Dashboard" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if not progress.is_complete %}
+<div class="text-center mb-4">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">{% trans "Loading..." %}</span>
+    </div>
+    <p class="text-muted mt-2">{% trans "Please wait while orders are being synced..." %}</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Only poll if the process is not complete
+        {% if not progress.is_complete %}
+        function updateProgress() {
+            $.ajax({
+                url: '{% url "core:get_orders_sync_progress" %}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    // Update progress bar
+                    $('.progress-bar').first().css('width', data.percentage + '%').attr('aria-valuenow', data.percentage).text(data.percentage + '%');
+                    
+                    // Update sellers progress bar
+                    var sellersPercentage = data.total_sellers > 0 ? (data.processed_sellers / data.total_sellers * 100).toFixed(0) : 0;
+                    $('.progress-bar').eq(1).css('width', sellersPercentage + '%').attr('aria-valuenow', sellersPercentage).text(sellersPercentage + '%');
+                    
+                    // Update counters
+                    $('.progress-value').eq(0).text(data.processed_orders.toLocaleString());
+                    $('.progress-value').eq(1).text(data.total_orders.toLocaleString());
+                    $('.progress-value').eq(2).text(data.processed_sellers);
+                    $('.progress-value').eq(3).text(data.total_sellers);
+                    
+                    // Update current status
+                    $('table td').eq(0).text(data.current_seller || '-');
+                    $('table td').eq(1).text(data.current_page + ' / ' + data.total_pages);
+                    
+                    // Check if complete
+                    if (data.is_complete) {
+                        location.reload(); // Reload to show completion UI
+                    }
+                },
+                error: function() {
+                    console.log('Error fetching progress data');
+                },
+                complete: function() {
+                    // Poll again in 2 seconds
+                    setTimeout(updateProgress, 2000);
+                }
+            });
+        }
+        
+        // Start polling
+        updateProgress();
+        {% endif %}
+    });
+</script>
+{% endblock %}

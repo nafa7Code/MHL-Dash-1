@@ -1,0 +1,201 @@
+{% load static %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% trans "Logistics Management System" %}{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% if LANGUAGE_CODE == 'ar' %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    {% endif %}
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-theme="light">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container-fluid">
+            <!-- Sidebar Toggle -->
+            <button class="btn btn-outline-light me-3" type="button" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Company Name (Centered) -->
+            <div class="navbar-brand mx-auto">
+                <strong>{% trans "MHL Logistics" %}</strong>
+            </div>
+            
+            <!-- Right Side Controls -->
+            <div class="d-flex align-items-center">
+                <!-- Theme Toggle -->
+                <button class="btn btn-outline-light me-2" id="themeToggle" title="{% trans 'Toggle Theme' %}">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                
+                <!-- Language Toggle -->
+                <div class="dropdown me-2">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-globe"></i>
+                        {% if LANGUAGE_CODE == 'ar' %}العربية{% else %}EN{% endif %}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <form action="{% url 'set_language' %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <input name="next" type="hidden" value="{{ request.get_full_path }}" />
+                                <input name="language" type="hidden" value="en" />
+                                <button type="submit" class="dropdown-item">English</button>
+                            </form>
+                        </li>
+                        <li>
+                            <form action="{% url 'set_language' %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <input name="next" type="hidden" value="{{ request.get_full_path }}" />
+                                <input name="language" type="hidden" value="ar" />
+                                <button type="submit" class="dropdown-item">العربية</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- User Menu -->
+                {% if user.is_authenticated %}
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user"></i>
+                        {{ user.get_full_name|default:user.username }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                            <i class="fas fa-user-cog me-2"></i>{% trans "Profile" %}
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i>{% trans "Logout" %}
+                        </a></li>
+                    </ul>
+                </div>
+                {% else %}
+                <a href="{% url 'accounts:login' %}" class="btn btn-outline-light">
+                    <i class="fas fa-sign-in-alt me-1"></i>{% trans "Login" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            {% if user.is_authenticated %}
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:dashboard' %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="menu-text">{% trans "Dashboard" %}</span>
+                    </a>
+                </li>
+                
+
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:sellers_kpi_dashboard' %}">
+                        <i class="fas fa-chart-pie"></i>
+                        <span class="menu-text">{% trans "Sellers Dashboard" %}</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:sellers_list' %}">
+                        <i class="fas fa-users"></i>
+                        <span class="menu-text">{% trans "Sellers" %}</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:bills_list' %}">
+                        <i class="fas fa-file-invoice"></i>
+                        <span class="menu-text">{% trans "Bills" %}</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:orders_dashboard' %}">
+                        <i class="fas fa-shipping-fast"></i>
+                        <span class="menu-text">{% trans "Orders" %}</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:omniful_sync' %}">
+                        <i class="fas fa-cloud-download-alt"></i>
+                        <span class="menu-text">{% trans "Omniful Sync" %}</span>
+                    </a>
+                </li>
+                
+                {% if user.is_staff or user.profile.is_admin %}
+                <li class="nav-item mt-3">
+                    <h6 class="sidebar-heading">
+                        <span class="menu-text">{% trans "Administration" %}</span>
+                    </h6>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'accounts:users' %}">
+                        <i class="fas fa-users"></i>
+                        <span class="menu-text">{% trans "Users" %}</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/admin/">
+                        <i class="fas fa-cogs"></i>
+                        <span class="menu-text">{% trans "Admin Panel" %}</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Messages -->
+        {% if messages %}
+        <div class="container-fluid mt-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Page Content -->
+        <div class="container-fluid py-4">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

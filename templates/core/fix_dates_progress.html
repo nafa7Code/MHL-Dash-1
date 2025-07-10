@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Fix Dates Progress" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{% trans "Fix Dates Progress" %}</h1>
+        <p class="text-muted mb-0">{% trans "Updating bill dates from Omniful API" %}</p>
+    </div>
+    <div>
+        <a href="{% url 'core:bills_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>{% trans "Back to Bills" %}
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="alert alert-info" id="status-message">
+            <i class="fas fa-sync fa-spin me-2"></i>
+            {% trans "Process is running. Please wait..." %}
+        </div>
+        
+        <div class="progress mb-3">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: {{ progress.percentage }}%;" 
+                 aria-valuenow="{{ progress.percentage }}" aria-valuemin="0" aria-valuemax="100">
+                {{ progress.percentage }}%
+            </div>
+        </div>
+        
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="h4" id="total-bills">{{ progress.total }}</div>
+                <div class="text-muted">{% trans "Total Bills" %}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="h4" id="processed-bills">{{ progress.processed }}</div>
+                <div class="text-muted">{% trans "Processed" %}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="h4 text-success" id="success-count">{{ progress.success }}</div>
+                <div class="text-muted">{% trans "Success" %}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="h4 text-danger" id="error-count">{{ progress.errors }}</div>
+                <div class="text-muted">{% trans "Errors" %}</div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4" id="completion-actions" style="display: none;">
+            <a href="{% url 'core:bills_list' %}" class="btn btn-success">
+                <i class="fas fa-check me-2"></i>{% trans "View Updated Bills" %}
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check progress every 2 seconds
+    const progressInterval = setInterval(checkProgress, 2000);
+    
+    function checkProgress() {
+        fetch('{% url "core:get_fix_progress" %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update progress bar
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = data.percentage + '%';
+                progressBar.setAttribute('aria-valuenow', data.percentage);
+                progressBar.textContent = data.percentage + '%';
+                
+                // Update counters
+                document.getElementById('total-bills').textContent = data.total;
+                document.getElementById('processed-bills').textContent = data.processed;
+                document.getElementById('success-count').textContent = data.success;
+                document.getElementById('error-count').textContent = data.errors;
+                
+                // Check if complete
+                if (data.is_complete) {
+                    clearInterval(progressInterval);
+                    document.getElementById('status-message').className = 'alert alert-success';
+                    document.getElementById('status-message').innerHTML = 
+                        '<i class="fas fa-check-circle me-2"></i>' + 
+                        '{% trans "Process completed successfully!" %}';
+                    document.getElementById('completion-actions').style.display = 'block';
+                    
+                    // Change progress bar style
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.remove('progress-bar-striped');
+                }
+            })
+            .catch(error => {
+                console.error('Error checking progress:', error);
+            });
+    }
+    
+    // Initial check
+    checkProgress();
+});
+</script>
+{% endblock %}

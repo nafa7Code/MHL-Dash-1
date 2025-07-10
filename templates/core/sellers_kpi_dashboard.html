@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Sellers KPI Dashboard" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{% trans "Sellers KPI Dashboard" %}</h1>
+        <p class="text-muted mb-0">{% trans "Key performance indicators and seller metrics" %}</p>
+    </div>
+    <div class="btn-group">
+        <form method="post" action="{% url 'core:sync_sellers' %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sync me-2"></i>{% trans "Refresh Data" %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards Row 1 -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ total_sellers }}</div>
+                        <div>{% trans "Total Sellers" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:sellers_list' %}" class="text-white text-decoration-none">
+                    {% trans "View All Sellers" %} <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ total_bills }}</div>
+                        <div>{% trans "Total Bills" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'core:bills_list' %}" class="text-white text-decoration-none">
+                    {% trans "View All Bills" %} <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ unpaid_sellers }}</div>
+                        <div>{% trans "Unpaid Sellers" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ bills_with_data }}</div>
+                        <div>{% trans "Bills with Data" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row 2 -->
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-3">
+        <div class="card border-success h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>{% trans "Top Seller" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if top_seller %}
+                <h6 class="card-title">{{ top_seller.seller__name }}</h6>
+                <p class="card-text">
+                    <strong>{{ top_seller.total_amount|floatformat:2|intcomma }} SAR</strong><br>
+                    <small class="text-muted">{{ top_seller.bill_count }} {% trans "bills" %}</small>
+                </p>
+                <a href="{% url 'core:seller_detail' top_seller.seller__guid %}" class="btn btn-success btn-sm">
+                    {% trans "View Details" %}
+                </a>
+                {% else %}
+                <p class="text-muted">{% trans "No data available" %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 col-md-6 mb-3">
+        <div class="card border-danger h-100">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>{% trans "Most Active Seller" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if most_active_seller %}
+                <h6 class="card-title">{{ most_active_seller.seller__name }}</h6>
+                <p class="card-text">
+                    <strong>{{ most_active_seller.bill_count }} {% trans "bills" %}</strong><br>
+                    <small class="text-muted">{{ most_active_seller.total_amount|floatformat:2|intcomma }} SAR</small>
+                </p>
+                <a href="{% url 'core:seller_detail' most_active_seller.seller__guid %}" class="btn btn-danger btn-sm">
+                    {% trans "View Details" %}
+                </a>
+                {% else %}
+                <p class="text-muted">{% trans "No data available" %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-4 col-md-6 mb-3">
+        <div class="card border-primary h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>{% trans "Average Bill" %}</h5>
+            </div>
+            <div class="card-body">
+                <h3 class="text-primary">{{ avg_bill_amount|floatformat:2|intcomma }} SAR</h3>
+                <p class="text-muted mb-0">{% trans "Per seller average" %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Last Paid Bill" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if last_paid_bill %}
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ last_paid_bill.name }}</h6>
+                        <p class="mb-1">{{ last_paid_bill.seller.name }}</p>
+                        <small class="text-muted">{{ last_paid_bill.created_at|date:"M j, Y H:i" }}</small>
+                    </div>
+                    <div class="text-end">
+                        <h5 class="text-success mb-0">{{ last_paid_bill.grand_total|floatformat:2|intcomma }} SAR</h5>
+                        <a href="{% url 'core:bill_detail' last_paid_bill.name %}" class="btn btn-sm btn-outline-primary">
+                            {% trans "View" %}
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">{% trans "No paid bills found" %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Oldest Unpaid Bill" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if oldest_bill %}
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ oldest_bill.name }}</h6>
+                        <p class="mb-1">{{ oldest_bill.seller.name }}</p>
+                        <small class="text-muted">{{ oldest_bill.created_at|date:"M j, Y H:i" }}</small>
+                    </div>
+                    <div class="text-end">
+                        <h5 class="text-warning mb-0">{{ oldest_bill.grand_total|floatformat:2|intcomma }} SAR</h5>
+                        <a href="{% url 'core:bill_detail' oldest_bill.name %}" class="btn btn-sm btn-outline-warning">
+                            {% trans "View" %}
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">{% trans "No unpaid bills found" %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Sellers Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Top 10 Sellers by Revenue" %}</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>{% trans "Seller Name" %}</th>
+                                <th class="text-end">{% trans "Total Revenue" %}</th>
+                                <th class="text-end">{% trans "Bills Count" %}</th>
+                                <th class="text-end">{% trans "Average" %}</th>
+                                <th>{% trans "Actions" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for seller in seller_totals %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ seller.seller__name }}</strong>
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ seller.total_amount|floatformat:2|intcomma }} SAR</strong>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-primary">{{ seller.bill_count }}</span>
+                                </td>
+                                <td class="text-end">
+                                    {% widthratio seller.total_amount seller.bill_count 1 %} SAR
+                                </td>
+                                <td>
+                                    <a href="{% url 'core:seller_detail' seller.seller__guid %}" class="btn btn-sm btn-outline-primary">
+                                        {% trans "View Details" %}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <i class="fas fa-chart-bar fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">{% trans "No seller data available. Refresh bills to load data." %}</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

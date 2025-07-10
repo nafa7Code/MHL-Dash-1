@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+{% load math_filters %}
+
+{% block title %}{% trans "Orders Dashboard" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{% trans "Orders KPI Dashboard" %}</h1>
+        <p class="text-muted mb-0">{% trans "Key performance indicators for orders" %}</p>
+    </div>
+    <div class="btn-group">
+        <form method="post" action="{% url 'core:sync_orders' %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sync me-2"></i>{% trans "Sync Orders" %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{% trans "Filters" %}</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="seller" class="form-label">{% trans "Seller" %}</label>
+                <select name="seller" id="seller" class="form-select">
+                    <option value="">{% trans "All Sellers" %}</option>
+                    {% for seller in sellers %}
+                    <option value="{{ seller.code }}" {% if selected_seller == seller.code %}selected{% endif %}>
+                        {{ seller.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="type" class="form-label">{% trans "Type" %}</label>
+                <select name="type" id="type" class="form-select">
+                    <option value="">{% trans "All Types" %}</option>
+                    <option value="B2B" {% if selected_type == 'B2B' %}selected{% endif %}>B2B</option>
+                    <option value="B2C" {% if selected_type == 'B2C' %}selected{% endif %}>B2C</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="date_from" class="form-label">{% trans "From Date" %}</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="date_to" class="form-label">{% trans "To Date" %}</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">{% trans "Status" %}</label>
+                <select name="status" id="status" class="form-select">
+                    <option value="">{% trans "All Statuses" %}</option>
+                    <option value="new_order" {% if selected_status == 'new_order' %}selected{% endif %}>{% trans "New Order" %}</option>
+                    <option value="processing" {% if selected_status == 'processing' %}selected{% endif %}>{% trans "Processing" %}</option>
+                    <option value="shipped" {% if selected_status == 'shipped' %}selected{% endif %}>{% trans "Shipped" %}</option>
+                    <option value="delivered" {% if selected_status == 'delivered' %}selected{% endif %}>{% trans "Delivered" %}</option>
+                    <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>{% trans "Cancelled" %}</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">{% trans "Filter" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ total_orders }}</div>
+                        <div>{% trans "Total Orders" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ b2b_orders }}</div>
+                        <div>{% trans "B2B Orders" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-building"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ b2c_orders }}</div>
+                        <div>{% trans "B2C Orders" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="h2 mb-0">{{ avg_delivery_time }}</div>
+                        <div>{% trans "Avg. Delivery Days" %}</div>
+                    </div>
+                    <div class="fs-1">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delivery Performance -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Delivery Performance" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background-color: #28a745; color: white;">
+                            <h3>{{ green_orders }}</h3>
+                            <p class="mb-0">{% trans "On Time" %}</p>
+                            <small>{% trans "≤ 5 days" %}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background-color: #ffc107; color: white;">
+                            <h3>{{ yellow_orders }}</h3>
+                            <p class="mb-0">{% trans "Moderate Delay" %}</p>
+                            <small>{% trans "6-10 days" %}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background-color: #dc3545; color: white;">
+                            <h3>{{ red_orders }}</h3>
+                            <p class="mb-0">{% trans "Severe Delay" %}</p>
+                            <small>{% trans "> 10 days" %}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>{% trans "On-Time Delivery Rate" %}</span>
+                        <span>{{ on_time_rate }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ on_time_rate }}%;" 
+                             aria-valuenow="{{ on_time_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>{{ new_orders_delayed }}</strong> {% trans "new orders are delayed (>2 days)" %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Payment Analysis" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Payment Mode" %}</th>
+                                <th class="text-end">{% trans "Count" %}</th>
+                                <th class="text-end">{% trans "Percentage" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payment_counts %}
+                            <tr>
+                                <td>{{ payment.payment_mode|default:"Unknown" }}</td>
+                                <td class="text-end">{{ payment.count }}</td>
+                                <td class="text-end">
+                                    {% if total_orders > 0 %}
+                                    {{ payment.count|floatformat:0|intcomma }} / {{ total_orders|floatformat:0|intcomma }}
+                                    ({{ payment.count|div:total_orders|mul:100|floatformat:1 }}%)
+                                    {% else %}
+                                    0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">{% trans "No payment data available" %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>{% trans "Payment Distribution" %}</h6>
+                    <div class="progress">
+                        {% for payment in payment_counts %}
+                        {% if payment.payment_mode == 'Cash On Delivery' %}
+                        <div class="progress-bar bg-warning" role="progressbar" 
+                             style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;" 
+                             aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}" 
+                             aria-valuemin="0" aria-valuemax="100" 
+                             title="{{ payment.payment_mode }}: {{ payment.count }}">
+                            COD
+                        </div>
+                        {% elif payment.payment_mode == 'Prepaid' %}
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;" 
+                             aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}" 
+                             aria-valuemin="0" aria-valuemax="100" 
+                             title="{{ payment.payment_mode }}: {{ payment.count }}">
+                            Prepaid
+                        </div>
+                        {% else %}
+                        <div class="progress-bar bg-info" role="progressbar" 
+                             style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;" 
+                             aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}" 
+                             aria-valuemin="0" aria-valuemax="100" 
+                             title="{{ payment.payment_mode }}: {{ payment.count }}">
+                            {{ payment.payment_mode|default:"Other" }}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Status & Top Regions -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Order Status" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Status" %}</th>
+                                <th class="text-end">{% trans "Count" %}</th>
+                                <th class="text-end">{% trans "Percentage" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for status in status_counts %}
+                            <tr>
+                                <td>
+                                    {% if status.status_code == 'new_order' %}
+                                    <span class="badge bg-primary">{% trans "New Order" %}</span>
+                                    {% elif status.status_code == 'processing' %}
+                                    <span class="badge bg-info">{% trans "Processing" %}</span>
+                                    {% elif status.status_code == 'shipped' %}
+                                    <span class="badge bg-warning">{% trans "Shipped" %}</span>
+                                    {% elif status.status_code == 'delivered' %}
+                                    <span class="badge bg-success">{% trans "Delivered" %}</span>
+                                    {% elif status.status_code == 'cancelled' %}
+                                    <span class="badge bg-danger">{% trans "Cancelled" %}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ status.status_code }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ status.count }}</td>
+                                <td class="text-end">
+                                    {% if total_orders > 0 %}
+                                    {{ status.count|div:total_orders|mul:100|floatformat:1 }}%
+                                    {% else %}
+                                    0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">{% trans "No status data available" %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Top Regions" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans "City" %}</th>
+                                <th class="text-end">{% trans "Orders" %}</th>
+                                <th class="text-end">{% trans "Percentage" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for region in top_regions %}
+                            <tr>
+                                <td>{{ region.shipping_city|default:"Unknown" }}</td>
+                                <td class="text-end">{{ region.count }}</td>
+                                <td class="text-end">
+                                    {% if total_orders > 0 %}
+                                    {{ region.count|div:total_orders|mul:100|floatformat:1 }}%
+                                    {% else %}
+                                    0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">{% trans "No region data available" %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Orders -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">{% trans "Recent Orders" %}</h5>
+        <a href="{% url 'core:customer_orders' %}" class="btn btn-sm btn-outline-primary">
+            {% trans "Customer Analytics" %}
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>{% trans "Order ID" %}</th>
+                        <th>{% trans "Seller" %}</th>
+                        <th>{% trans "Customer" %}</th>
+                        <th>{% trans "Type" %}</th>
+                        <th>{% trans "Created" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Delivery" %}</th>
+                        <th>{% trans "Payment" %}</th>
+                        <th>{% trans "Total" %}</th>
+                        <th>{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'core:order_detail' order.order_id %}" class="text-decoration-none">
+                                {{ order.order_id }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'core:seller_orders' order.seller.code %}" class="text-decoration-none">
+                                {{ order.seller.name }}
+                            </a>
+                        </td>
+                        <td>{{ order.customer_first_name }} {{ order.customer_last_name }}</td>
+                        <td>
+                            <span class="badge {% if order.order_type == 'B2B' %}bg-info{% else %}bg-success{% endif %}">
+                                {{ order.order_type }}
+                            </span>
+                        </td>
+                        <td>{{ order.order_created_at|date:"M j, Y" }}</td>
+                        <td>
+                            {% if order.status_code == 'new_order' %}
+                            <span class="badge bg-primary">{% trans "New Order" %}</span>
+                            {% elif order.status_code == 'processing' %}
+                            <span class="badge bg-info">{% trans "Processing" %}</span>
+                            {% elif order.status_code == 'shipped' %}
+                            <span class="badge bg-warning">{% trans "Shipped" %}</span>
+                            {% elif order.status_code == 'delivered' %}
+                            <span class="badge bg-success">{% trans "Delivered" %}</span>
+                            {% elif order.status_code == 'cancelled' %}
+                            <span class="badge bg-danger">{% trans "Cancelled" %}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ order.status_code }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.days_to_deliver %}
+                            <span class="badge {% if order.delay_category == 'green' %}bg-success{% elif order.delay_category == 'yellow' %}bg-warning{% elif order.delay_category == 'red' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ order.days_to_deliver }} {% trans "days" %}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">{% trans "N/A" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ order.payment_mode }}</td>
+                        <td>{{ order.total|floatformat:2|intcomma }}</td>
+                        <td>
+                            <a href="{% url 'core:order_detail' order.order_id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <i class="fas fa-shopping-cart fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">{% trans "No orders found. Sync orders to get started." %}</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

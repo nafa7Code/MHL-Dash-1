@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Order" %} {{ order.order_id }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">{% trans "Order" %} {{ order.order_id }}</h1>
+        <p class="text-muted mb-0">{{ order.seller.name }}</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'core:seller_orders' order.seller.code %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>{% trans "Back to Seller Orders" %}
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Order Summary -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Order Summary" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">{% trans "Order ID:" %}</td>
+                                <td>{{ order.order_id }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Seller:" %}</td>
+                                <td>{{ order.seller.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Store:" %}</td>
+                                <td>{{ order.store_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Type:" %}</td>
+                                <td>
+                                    <span class="badge {% if order.order_type == 'B2B' %}bg-info{% else %}bg-success{% endif %}">
+                                        {{ order.order_type }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Status:" %}</td>
+                                <td>
+                                    {% if order.status_code == 'new_order' %}
+                                    <span class="badge bg-primary">{% trans "New Order" %}</span>
+                                    {% elif order.status_code == 'processing' %}
+                                    <span class="badge bg-info">{% trans "Processing" %}</span>
+                                    {% elif order.status_code == 'shipped' %}
+                                    <span class="badge bg-warning">{% trans "Shipped" %}</span>
+                                    {% elif order.status_code == 'delivered' %}
+                                    <span class="badge bg-success">{% trans "Delivered" %}</span>
+                                    {% elif order.status_code == 'cancelled' %}
+                                    <span class="badge bg-danger">{% trans "Cancelled" %}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ order.status_code }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">{% trans "Created:" %}</td>
+                                <td>{{ order.order_created_at|date:"F j, Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Delivery Date:" %}</td>
+                                <td>
+                                    {% if order.delivery_date %}
+                                    {{ order.delivery_date|date:"F j, Y H:i" }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Delivery Time:" %}</td>
+                                <td>
+                                    {% if order.days_to_deliver %}
+                                    <span class="badge {% if order.delay_category == 'green' %}bg-success{% elif order.delay_category == 'yellow' %}bg-warning{% elif order.delay_category == 'red' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ order.days_to_deliver }} {% trans "days" %}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Payment Mode:" %}</td>
+                                <td>{{ order.payment_mode }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Payment Method:" %}</td>
+                                <td>{{ order.payment_method|default:"-" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="mt-3 text-center">
+                    <h3 class="text-success mb-0">{{ order.total|floatformat:2|intcomma }}</h3>
+                    <p class="text-muted">{% trans "Total Amount" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Customer Information -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{% trans "Customer Information" %}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>{% trans "Contact Details" %}</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">{% trans "Name:" %}</td>
+                                <td>{{ order.customer_first_name }} {{ order.customer_last_name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Email:" %}</td>
+                                <td>{{ order.customer_email|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Phone:" %}</td>
+                                <td>{{ order.customer_phone|default:"-" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>{% trans "Shipping Address" %}</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold">{% trans "City:" %}</td>
+                                <td>{{ order.shipping_city|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Region:" %}</td>
+                                <td>{{ order.shipping_region|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">{% trans "Country:" %}</td>
+                                <td>{{ order.shipping_country|default:"-" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Raw Data -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{% trans "Raw Order Data" %}</h5>
+    </div>
+    <div class="card-body">
+        <pre class="bg-light p-3 rounded"><code>{{ raw_data }}</code></pre>
+    </div>
+</div>
+{% endblock %}
