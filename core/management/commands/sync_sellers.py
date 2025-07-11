@@ -104,8 +104,9 @@ class Command(BaseCommand):
                     # --- Save/Update Seller ---
                     # Using update_or_create is efficient for syncing
                     seller, created = Seller.objects.update_or_create(
-                        guid=seller_item.get('guid'),  # Lookup by guid
+                        code=seller_item.get('code'),  # Lookup by guid
                         defaults={
+                            'guid': seller_item.get('guid'),
                             'name': seller_item.get('name', ''),
                             'phone': seller_item.get('phone', ''),
                             'email': seller_item.get('email', ''),
