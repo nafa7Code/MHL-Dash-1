@@ -24,6 +24,8 @@ from django.shortcuts import redirect
 import io
 import re
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
+from django.shortcuts import redirect, render
 
 
 @login_required
@@ -134,15 +136,38 @@ def omniful_sync(request):
     return render(request, 'core/omniful_sync.html', context)
 
 
+# @login_required
+# @require_POST
+# def sync_sellers(request):
+#     """Sync sellers from Omniful API."""
+#     try:
+#         call_command('sync_sellers')
+#         messages.success(request, _('Sellers synced successfully.'))
+#     except Exception as e:
+#         messages.error(request, _('Error syncing sellers: {}').format(str(e)))
+
+#     return redirect('core:sellers_list')
+
+
 @login_required
 @require_POST
 def sync_sellers(request):
-    """Sync sellers from Omniful API."""
+    """Sync sellers from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
     try:
-        call_command('sync_sellers')
+        call_command('sync_sellers', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
         messages.success(request, _('Sellers synced successfully.'))
+
+        # Pass the output log to the next request via session
+        request.session['sync_logs'] = output
+
     except Exception as e:
+        error_output = stderr.getvalue() + "\n" + str(e)
         messages.error(request, _('Error syncing sellers: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
 
     return redirect('core:sellers_list')
 
@@ -150,13 +175,25 @@ def sync_sellers(request):
 @login_required
 @require_POST
 def sync_bills(request):
-    """Sync Bills from Omniful API."""
-    out = io.StringIO()
+    """Sync Bills from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
     try:
-        call_command('sync_bills')
+        # Call the management command with custom stdout and stderr
+        call_command('sync_bills', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
+
         messages.success(request, _('Bills synced successfully.'))
+
+        # Store the output log in session for display
+        request.session['sync_logs'] = output
+
     except Exception as e:
-        messages.error(request, _('Error syncing Bills: {}').format(str(e)))
+        error_output = stderr.getvalue() + "\n" + str(e)
+        messages.error(request, _('Error syncing bills: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
+
     return redirect('core:bills_list')
 
 
@@ -175,13 +212,18 @@ def refresh_bill(request, bill_name):
 
 @login_required
 def sellers_list(request):
-    """List all sellers."""
+    """List all sellers and optionally display sync logs."""
     sellers = Seller.objects.all().order_by('name')
-    context = {
+    total_sellers = sellers.count()
+
+    # Get logs from session (set after sync), then clear so they show only once
+    sync_logs = request.session.pop('sync_logs', None)
+
+    return render(request, 'core/sellers_list.html', {
         'sellers': sellers,
-        'total_sellers': sellers.count(),
-    }
-    return render(request, 'core/sellers_list.html', context)
+        'total_sellers': total_sellers,
+        'sync_logs': sync_logs,
+    })
 
 
 @login_required
@@ -204,10 +246,16 @@ def bills_list(request):
     """List all vendor bills."""
     bills = VendorBill.objects.select_related(
         'seller').order_by('-created_at_api')
+
+    # Extract and remove sync_logs from session (if available)
+    sync_logs = request.session.pop('sync_logs', None)
+
     context = {
         'bills': bills,
         'total_bills': bills.count(),
+        'sync_logs': sync_logs,
     }
+
     return render(request, 'core/bills_list.html', context)
 
 
@@ -336,13 +384,23 @@ def get_fix_progress(request):
 @login_required
 @require_POST
 def sync_orders(request):
-    """Sync orders from Omniful API."""
+    """Sync orders from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
     try:
-        call_command('sync_orders')
+        call_command('sync_orders', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
         messages.success(request, _(
             'Orders synced successfully for all sellers.'))
+
+        # Save logs to session for display
+        request.session['sync_logs'] = output
+
     except Exception as e:
+        error_output = stderr.getvalue() + "\n" + str(e)
         messages.error(request, _('Error syncing orders: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
 
     return redirect('core:orders_dashboard')
 
@@ -453,6 +511,7 @@ def get_orders_sync_progress(request):
 @login_required
 def orders_dashboard(request):
     """Main orders KPI dashboard."""
+    sync_logs = request.session.pop('sync_logs', None)
     # Get filters
     seller_code = request.GET.get('seller')
     order_type = request.GET.get('type')  # B2B or B2C
@@ -556,6 +615,7 @@ def orders_dashboard(request):
         'selected_payment': payment_mode,
         'date_from': date_from,
         'date_to': date_to,
+        'sync_logs': sync_logs,
     }
 
     return render(request, 'core/orders_dashboard.html', context)

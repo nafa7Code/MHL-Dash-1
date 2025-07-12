@@ -60,7 +60,7 @@
                 <div class="mt-3">
                     <h6>{% trans "Address:" %}</h6>
                     <div class="bg-light p-2 rounded">
-                        <pre class="mb-0 small">{{seller.address|pprint }}</pre>
+                        <pre class="mb-0 small">{{ seller.address.state_name }} {{ seller.address.country_name }}</pre>
                     </div>
                 </div>
                 {% endif %}

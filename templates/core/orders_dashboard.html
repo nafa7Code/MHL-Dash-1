@@ -7,6 +7,21 @@
 {% block title %}{% trans "Orders Dashboard" %} - {{ block.super }}{% endblock %}
 
 {% block content %}
+
+{% if sync_logs %}
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>{% trans "Sync Logs" %}</strong>
+    </div>
+    <div class="card-body">
+        <pre class="bg-dark text-white p-3 rounded small" style="max-height: 400px; overflow-y: auto;">
+{{ sync_logs }}
+        </pre>
+    </div>
+</div>
+{% endif %}
+
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">{% trans "Orders KPI Dashboard" %}</h1>
@@ -50,7 +65,8 @@
             </div>
             <div class="col-md-2">
                 <label for="date_from" class="form-label">{% trans "From Date" %}</label>
-                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from|date:'Y-m-d' }}">
+                <input type="date" class="form-control" id="date_from" name="date_from"
+                    value="{{ date_from|date:'Y-m-d' }}">
             </div>
             <div class="col-md-2">
                 <label for="date_to" class="form-label">{% trans "To Date" %}</label>
@@ -60,11 +76,16 @@
                 <label for="status" class="form-label">{% trans "Status" %}</label>
                 <select name="status" id="status" class="form-select">
                     <option value="">{% trans "All Statuses" %}</option>
-                    <option value="new_order" {% if selected_status == 'new_order' %}selected{% endif %}>{% trans "New Order" %}</option>
-                    <option value="processing" {% if selected_status == 'processing' %}selected{% endif %}>{% trans "Processing" %}</option>
-                    <option value="shipped" {% if selected_status == 'shipped' %}selected{% endif %}>{% trans "Shipped" %}</option>
-                    <option value="delivered" {% if selected_status == 'delivered' %}selected{% endif %}>{% trans "Delivered" %}</option>
-                    <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>{% trans "Cancelled" %}</option>
+                    <option value="new_order" {% if selected_status == 'new_order' %}selected{% endif %}>{% trans "New
+                        Order" %}</option>
+                    <option value="processing" {% if selected_status == 'processing' %}selected{% endif %}>{% trans
+                        "Processing" %}</option>
+                    <option value="shipped" {% if selected_status == 'shipped' %}selected{% endif %}>{% trans "Shipped" %}
+                    </option>
+                    <option value="delivered" {% if selected_status == 'delivered' %}selected{% endif %}>{% trans
+                        "Delivered" %}</option>
+                    <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>{% trans
+                        "Cancelled" %}</option>
                 </select>
             </div>
             <div class="col-md-1 d-flex align-items-end">
@@ -91,7 +112,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3 mb-3">
         <div class="card bg-info text-white h-100">
             <div class="card-body">
@@ -107,7 +128,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3 mb-3">
         <div class="card bg-success text-white h-100">
             <div class="card-body">
@@ -123,7 +144,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3 mb-3">
         <div class="card bg-warning text-white h-100">
             <div class="card-body">
@@ -172,18 +193,18 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="mt-4">
                     <div class="d-flex justify-content-between mb-1">
                         <span>{% trans "On-Time Delivery Rate" %}</span>
                         <span>{{ on_time_rate }}%</span>
                     </div>
                     <div class="progress">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ on_time_rate }}%;" 
-                             aria-valuenow="{{ on_time_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ on_time_rate }}%;"
+                            aria-valuenow="{{ on_time_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
-                
+
                 <div class="alert alert-warning mt-3" role="alert">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>{{ new_orders_delayed }}</strong> {% trans "new orders are delayed (>2 days)" %}
@@ -191,7 +212,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
@@ -214,7 +235,8 @@
                                 <td class="text-end">{{ payment.count }}</td>
                                 <td class="text-end">
                                     {% if total_orders > 0 %}
-                                    {{ payment.count|floatformat:0|intcomma }} / {{ total_orders|floatformat:0|intcomma }}
+                                    {{ payment.count|floatformat:0|intcomma }} / {{ total_orders|floatformat:0|intcomma
+                                    }}
                                     ({{ payment.count|div:total_orders|mul:100|floatformat:1 }}%)
                                     {% else %}
                                     0%
@@ -229,33 +251,33 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <div class="mt-3">
                     <h6>{% trans "Payment Distribution" %}</h6>
                     <div class="progress">
                         {% for payment in payment_counts %}
                         {% if payment.payment_mode == 'Cash On Delivery' %}
-                        <div class="progress-bar bg-warning" role="progressbar" 
-                             style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;" 
-                             aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}" 
-                             aria-valuemin="0" aria-valuemax="100" 
-                             title="{{ payment.payment_mode }}: {{ payment.count }}">
+                        <div class="progress-bar bg-warning" role="progressbar"
+                            style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;"
+                            aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}"
+                            aria-valuemin="0" aria-valuemax="100"
+                            title="{{ payment.payment_mode }}: {{ payment.count }}">
                             COD
                         </div>
                         {% elif payment.payment_mode == 'Prepaid' %}
-                        <div class="progress-bar bg-success" role="progressbar" 
-                             style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;" 
-                             aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}" 
-                             aria-valuemin="0" aria-valuemax="100" 
-                             title="{{ payment.payment_mode }}: {{ payment.count }}">
+                        <div class="progress-bar bg-success" role="progressbar"
+                            style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;"
+                            aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}"
+                            aria-valuemin="0" aria-valuemax="100"
+                            title="{{ payment.payment_mode }}: {{ payment.count }}">
                             Prepaid
                         </div>
                         {% else %}
-                        <div class="progress-bar bg-info" role="progressbar" 
-                             style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;" 
-                             aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}" 
-                             aria-valuemin="0" aria-valuemax="100" 
-                             title="{{ payment.payment_mode }}: {{ payment.count }}">
+                        <div class="progress-bar bg-info" role="progressbar"
+                            style="width: {% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}%;"
+                            aria-valuenow="{% if total_orders > 0 %}{{ payment.count|div:total_orders|mul:100 }}{% else %}0{% endif %}"
+                            aria-valuemin="0" aria-valuemax="100"
+                            title="{{ payment.payment_mode }}: {{ payment.count }}">
                             {{ payment.payment_mode|default:"Other" }}
                         </div>
                         {% endif %}
@@ -322,7 +344,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
@@ -404,7 +426,8 @@
                         </td>
                         <td>{{ order.customer_first_name }} {{ order.customer_last_name }}</td>
                         <td>
-                            <span class="badge {% if order.order_type == 'B2B' %}bg-info{% else %}bg-success{% endif %}">
+                            <span
+                                class="badge {% if order.order_type == 'B2B' %}bg-info{% else %}bg-success{% endif %}">
                                 {{ order.order_type }}
                             </span>
                         </td>
@@ -426,7 +449,8 @@
                         </td>
                         <td>
                             {% if order.days_to_deliver %}
-                            <span class="badge {% if order.delay_category == 'green' %}bg-success{% elif order.delay_category == 'yellow' %}bg-warning{% elif order.delay_category == 'red' %}bg-danger{% else %}bg-secondary{% endif %}">
+                            <span
+                                class="badge {% if order.delay_category == 'green' %}bg-success{% elif order.delay_category == 'yellow' %}bg-warning{% elif order.delay_category == 'red' %}bg-danger{% else %}bg-secondary{% endif %}">
                                 {{ order.days_to_deliver }} {% trans "days" %}
                             </span>
                             {% else %}
@@ -436,7 +460,8 @@
                         <td>{{ order.payment_mode }}</td>
                         <td>{{ order.total|floatformat:2|intcomma }}</td>
                         <td>
-                            <a href="{% url 'core:order_detail' order.order_id %}" class="btn btn-sm btn-outline-primary">
+                            <a href="{% url 'core:order_detail' order.order_id %}"
+                                class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-eye"></i>
                             </a>
                         </td>
@@ -454,4 +479,55 @@
         </div>
     </div>
 </div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none;">
+    <div class="spinner-wrapper">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{% trans "Loading..." %}</span>
+        </div>
+        <p class="mt-3 text-white">{% trans "Syncing orders, please wait..." %}</p>
+    </div>
+</div>
+
+<style>
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1050;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        pointer-events: all;
+    }
+
+    .spinner-wrapper {
+        text-align: center;
+    }
+
+    body.loading {
+        overflow: hidden;
+        pointer-events: none;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const syncForm = document.querySelector('form[action$="{% url "core:sync_orders" %}"]');
+        const overlay = document.getElementById("loading-overlay");
+
+        if (syncForm) {
+            syncForm.addEventListener("submit", function () {
+                document.body.classList.add("loading");
+                overlay.style.display = "flex";
+            });
+        }
+    });
+</script>
+
 {% endblock %}

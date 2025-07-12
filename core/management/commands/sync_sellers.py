@@ -88,18 +88,29 @@ class Command(BaseCommand):
                             self.stdout.write(self.style.WARNING(
                                 f"Could not parse updated_at for seller {seller_item.get('guid', 'N/A')}: {seller_item['updated_at']}"))
 
-                    # --- Prepare address data for TextField ---
-                    # Assuming 'address' might be a dictionary if it contains sub-fields,
-                    # but your model's 'address' is a TextField.
-                    # Convert dict to string, or if it's already a string, use it.
-                    api_address = seller_item.get('address', '')
-                    if isinstance(api_address, dict):
-                        # Example: if address is {'street': '123 Main', 'city': 'Anytown'}
-                        # Convert it to a readable string or pick relevant parts
-                        address_str = ', '.join([str(v)
-                                                for v in api_address.values()])
-                    else:
-                        address_str = str(api_address)  # Ensure it's a string
+                    # --- Prepare address data---
+                    api_address = seller_item.get('address', {})
+
+                    # Extract specific parts from the address
+                    country_name = api_address.get(
+                        'country', {}).get('name', '')
+                    state_name = api_address.get('state', {}).get('name', '')
+                    state_code = api_address.get('state', {}).get('code', '')
+                    city_name = api_address.get('city', {}).get('name', '')
+                    address_line1 = api_address.get('address_line1', '')
+                    address_line2 = api_address.get('address_line2', '')
+
+                    # Construct the address dictionary
+                    address_data = {
+                        'country_name': country_name,
+                        'state_name': state_name,
+                        'state_code': state_code,
+                        'city_name': city_name,
+                        'address_line1': address_line1,
+                        'address_line2': address_line2,
+                    }
+
+                    address_str = address_data
 
                     # --- Save/Update Seller ---
                     # Using update_or_create is efficient for syncing

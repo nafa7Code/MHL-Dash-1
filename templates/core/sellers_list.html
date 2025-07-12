@@ -20,17 +20,17 @@
             </button>
         </form>
         {# Form for Import Bills #}
-        <form method="post" action="{% url 'core:sync_bills' %}" style="display: inline;">
+        <!-- <form method="post" action="{% url 'core:sync_bills' %}" style="display: inline;">
             {% csrf_token %}
             <button type="submit" class="btn btn-success">
                 <i class="fas fa-download me-2"></i>{% trans "Import Bills" %}
             </button>
-        </form>
+        </form> -->
     </div>
 </div>
 
 {# Django messages for feedback after sync/import actions #}
-{% if messages %}
+<!-- {% if messages %}
 <div class="messages mb-4">
     {% for message in messages %}
     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -39,7 +39,44 @@
     </div>
     {% endfor %}
 </div>
+{% endif %} -->
+
+<!-- {% if request.session.sync_logs %}
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>{% trans "Sync Logs" %}</strong>
+    </div>
+    <div class="card-body">
+        <pre class="bg-dark text-white p-3 rounded small" style="max-height: 400px; overflow-y: auto;">
+{{ request.session.sync_logs }}
+        </pre>
+    </div>
+</div>
+{% endif %} -->
+
+{% if sync_logs %}
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>{% trans "Sync Logs" %}</strong>
+    </div>
+    <div class="card-body">
+        <pre class="bg-dark text-white p-3 rounded small" style="max-height: 400px; overflow-y: auto;">
+{{ sync_logs }}
+        </pre>
+    </div>
+</div>
 {% endif %}
+
+<!-- <button class="btn btn-outline-secondary btn-sm mb-2" type="button" data-bs-toggle="collapse"
+    data-bs-target="#syncLogsCollapse">
+    {% trans "Toggle Sync Logs" %}
+</button>
+
+<div class="collapse" id="syncLogsCollapse">
+    <div class="card card-body bg-dark text-white">
+        <pre style="white-space: pre-wrap;">{{ sync_logs }}</pre>
+    </div>
+</div> -->
 
 <div class="row mb-4">
     <div class="col-md-3">
@@ -113,4 +150,53 @@
         </div>
     </div>
 </div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none;">
+    <div class="spinner-wrapper">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">{% trans "Loading..." %}</span>
+        </div>
+        <p class="mt-3 text-white">{% trans "Syncing sellers, please wait..." %}</p>
+    </div>
+</div>
+
+<style>
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1050;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        pointer-events: all;
+    }
+
+    .spinner-wrapper {
+        text-align: center;
+    }
+
+    body.loading {
+        overflow: hidden;
+        pointer-events: none;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const syncForm = document.querySelector('form[action$="{% url "core:sync_sellers" %}"]');
+        const overlay = document.getElementById("loading-overlay");
+
+        syncForm.addEventListener("submit", function () {
+            document.body.classList.add("loading");
+            overlay.style.display = "flex";
+        });
+    });
+</script>
+
 {% endblock %}
