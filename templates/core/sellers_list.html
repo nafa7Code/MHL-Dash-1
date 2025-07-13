@@ -50,43 +50,6 @@
 </div>
 {% endif %} -->
 
-<!-- {% if request.session.sync_logs %}
-<div class="card mb-4">
-    <div class="card-header">
-        <strong>{% trans "Sync Logs" %}</strong>
-    </div>
-    <div class="card-body">
-        <pre class="bg-dark text-white p-3 rounded small" style="max-height: 400px; overflow-y: auto;">
-{{ request.session.sync_logs }}
-        </pre>
-    </div>
-</div>
-{% endif %} -->
-
-{% if sync_logs %}
-<div class="card mb-4">
-    <div class="card-header">
-        <strong>{% trans "Sync Logs" %}</strong>
-    </div>
-    <div class="card-body">
-        <pre class="bg-dark text-white p-3 rounded small" style="max-height: 400px; overflow-y: auto;">
-{{ sync_logs }}
-        </pre>
-    </div>
-</div>
-{% endif %}
-
-<!-- <button class="btn btn-outline-secondary btn-sm mb-2" type="button" data-bs-toggle="collapse"
-    data-bs-target="#syncLogsCollapse">
-    {% trans "Toggle Sync Logs" %}
-</button>
-
-<div class="collapse" id="syncLogsCollapse">
-    <div class="card card-body bg-dark text-white">
-        <pre style="white-space: pre-wrap;">{{ sync_logs }}</pre>
-    </div>
-</div> -->
-
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card text-center">
@@ -216,6 +179,9 @@
                 const now = new Date();
                 localStorage.setItem("last_seller_sync_time", now.toISOString());
                 updateLastSyncDisplay();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
             }
         }
     
@@ -240,7 +206,7 @@
                         logBox.textContent += "\n❌ Error loading logs.";
                         setButtonState(false);
                     });
-            }, 1000);
+            }, 3000);
         }
     
         // Resume sync on refresh if needed

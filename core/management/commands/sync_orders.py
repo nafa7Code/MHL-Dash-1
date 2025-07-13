@@ -106,6 +106,7 @@ class Command(BaseCommand):
                     meta = data.get('meta', {})
                     current_page = meta.get('current_page', page)
                     last_page = meta.get('last_page', 1)
+                    total_orders = meta.get('total', 0)
 
                     if not orders:
                         log_line(
@@ -172,7 +173,8 @@ class Command(BaseCommand):
                                 'cancel_order_after_seconds': order_data.get('cancel_order_after_seconds', 0),
                                 'expected_delivery_epoch': order_data.get('expected_delivery_epoch', 0),
                                 'invoice': order_data.get('invoice', {}),
-                                'raw_data': order_data
+                                'raw_data': order_data,
+                                'total_orders': total_orders,
                             }
                         )
 

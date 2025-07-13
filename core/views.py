@@ -33,6 +33,9 @@ from django.http import StreamingHttpResponse
 from django.utils.decorators import method_decorator
 import threading
 from .models import SyncLog
+import logging
+from django.db.models.functions import Lower, Trim
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -537,7 +540,6 @@ def orders_dashboard(request):
 
     # Base queryset
     orders = Order.objects.all()
-
     # Apply filters
     if seller_code:
         orders = orders.filter(seller__code=seller_code)
@@ -591,6 +593,24 @@ def orders_dashboard(request):
     yellow_orders = orders.filter(delay_category='yellow').count()
     red_orders = orders.filter(delay_category='red').count()
 
+    # red_orders rows
+    red_orders_qs = (
+        orders
+        .annotate(
+            status_clean=Trim(Lower(F('status_code')))
+        )
+        .filter(
+            order_created_at__gte=timezone.now() - timedelta(days=30),  # 🔄 within last 30 days
+            order_created_at__lt=timezone.now() - timedelta(days=10)    # ⬅️ older than 10 days
+        )
+        .exclude(
+            status_clean='delivered'
+        )
+        .order_by('-order_created_at')
+    )
+
+    red_orders_count = red_orders_qs.count()
+
     # New orders delayed (>2 days)
     new_orders_delayed = orders.filter(
         status_code='new_order',
@@ -631,6 +651,8 @@ def orders_dashboard(request):
         'date_from': date_from,
         'date_to': date_to,
         'sync_logs': sync_logs,
+        'red_orders_qs': red_orders_qs,
+        'red_orders_count': red_orders_count,
     }
 
     return render(request, 'core/orders_dashboard.html', context)

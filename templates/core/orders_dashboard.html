@@ -242,8 +242,7 @@
                                 <td class="text-end">{{ payment.count }}</td>
                                 <td class="text-end">
                                     {% if total_orders > 0 %}
-                                    {{ payment.count|floatformat:0|intcomma }} / {{ total_orders|floatformat:0|intcomma
-                                    }}
+                                    {{ payment.count|floatformat:0|intcomma }} / {{ total_orders|floatformat:0|intcomma }}
                                     ({{ payment.count|div:total_orders|mul:100|floatformat:1 }}%)
                                     {% else %}
                                     0%
@@ -295,6 +294,57 @@
         </div>
     </div>
 </div>
+
+<!-- Red-delay Orders quick list -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-danger">
+                <h5 class="card-title mb-0">{% trans "Delay Orders With in Previous Month" %} ({{ red_orders_count }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if red_orders_qs %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{% trans "Order ID" %}</th>
+                                <th>{% trans "Customer" %}</th>
+                                <th>{% trans "Created" %}</th>
+                                <th>{% trans "Status" %}</th>
+                                <th>{% trans "Actions" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in red_orders_qs %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'core:order_detail' order.order_id %}" class="text-decoration-none">
+                                        {{ order.order_id }}
+                                    </a>
+                                </td>
+                                <td>{{ order.customer_first_name }} {{ order.customer_last_name }}</td>
+                                <td>{{ order.order_created_at|date:"M j, Y" }}</td>
+                                <td>{{ order.status_code }}</td>
+                                <td>
+                                    <a href="{% url 'core:order_detail' order.order_id %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-center py-3 text-muted">{% trans "No delay orders at the moment." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /Red-delay Orders quick list -->
 
 <!-- Order Status & Top Regions -->
 <div class="row mb-4">
@@ -541,6 +591,9 @@
                 const now = new Date();
                 localStorage.setItem("last_order_sync_time", now.toISOString());
                 updateLastSyncDisplay();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
             }
         }
     
@@ -565,7 +618,7 @@
                         logBox.textContent += "\n❌ Error loading logs.";
                         setButtonState(false);
                     });
-            }, 1000);
+            }, 3000);
         }
     
         // Resume sync on refresh if needed
