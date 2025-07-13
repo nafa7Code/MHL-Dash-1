@@ -7,32 +7,33 @@
 
 {% block content %}
 
-{% if sync_logs %}
-<div class="card mb-4">
-    <div class="card-header">
-        <strong>{% trans "Sync Logs" %}</strong>
-    </div>
-    <div class="card-body">
-        <pre class="bg-dark text-white p-3 rounded small" style="max-height: 400px; overflow-y: auto;">
-{{ sync_logs }}
-        </pre>
-    </div>
-</div>
-{% endif %}
-
-
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">{% trans "Vendor Bills" %}</h1>
         <p class="text-muted mb-0">{% trans "All vendor bills from Omniful" %}</p>
+        <small id="last-bills-sync-time" class="text-muted d-block mt-2"></small>
+
     </div>
     <div class="btn-group">
-        <form method="post" action="{% url 'core:sync_bills' %}" style="display: inline;">
+        <form id="sync-bills-form" method="post" action="{% url 'core:sync_bills' %}">
+            {% csrf_token %}
+            <button id="sync-bills-btn" type="submit" class="btn btn-primary" data-syncing="false">
+              <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+              <span class="btn-label">{% trans "Sync Bills" %}</span>
+            </button>
+          </form>
+        
+          <button id="view-logs-btn" type="button" class="btn btn-outline-secondary d-none">
+            <i class="fas fa-terminal me-1"></i> {% trans "View Logs" %}
+          </button>
+          
+          
+        <!-- <form method="post" action="{% url 'core:sync_bills' %}" style="display: inline;">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-sync me-2"></i>{% trans "Sync Bills" %}
             </button>
-        </form>
+        </form> -->
         <!-- <form method="post" action="{% url 'core:update_bill_dates' %}" style="display: inline;">
             {% csrf_token %}
             <input type="hidden" name="limit" value="100">
@@ -125,60 +126,143 @@
     </div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loading-overlay" style="display: none;">
-    <div class="spinner-wrapper">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">{% trans "Loading..." %}</span>
+
+<!-- Sync Progress Modal -->
+<div class="modal fade" id="syncLogModal" tabindex="-1" aria-labelledby="syncLogModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="syncLogModalLabel">{% trans "Sync Logs" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
         </div>
-        <p class="mt-3 text-white">{% trans "Syncing Bills, please wait..." %}</p>
+        <div class="modal-body">
+            <pre id="sync-log-box" style="font-family: monospace; height: 400px; overflow-y: auto;" class="bg-dark text-white p-3 rounded small"></pre>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+        </div>
+      </div>
     </div>
-</div>
-
-<style>
-    #loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 1050;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        pointer-events: all;
-    }
-
-    .spinner-wrapper {
-        text-align: center;
-    }
-
-    body.loading {
-        overflow: hidden;
-        pointer-events: none;
-    }
-</style>
+  </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const overlay = document.getElementById("loading-overlay");
-
-        const formsToWatch = [
-            'form[action$="{% url "core:sync_bills" %}"]'
-        ];
-
-        formsToWatch.forEach(selector => {
-            const form = document.querySelector(selector);
-            if (form) {
-                form.addEventListener("submit", function () {
-                    document.body.classList.add("loading");
-                    overlay.style.display = "flex";
-                });
+    document.addEventListener('DOMContentLoaded', function () {
+        const syncForm = document.getElementById('sync-bills-form');
+        const syncBtn = document.getElementById('sync-bills-btn');
+        const viewLogsBtn = document.getElementById('view-logs-btn');
+        const logModalElement = document.getElementById('syncLogModal');
+        const logModal = new bootstrap.Modal(logModalElement, { backdrop: 'static', keyboard: false });
+        const logBox = document.getElementById('sync-log-box');
+        const spinner = syncBtn.querySelector('.spinner-border');
+        const label = syncBtn.querySelector('.btn-label');
+    
+        let polling = null;
+        let currentLogId = null;
+    
+        function setButtonState(isSyncing) {
+            if (isSyncing) {
+                syncBtn.disabled = true;
+                spinner.classList.remove('d-none');
+                label.textContent = "Syncing...";
+                viewLogsBtn.classList.remove('d-none');
+                localStorage.setItem('isSyncingBills', 'true');
+                localStorage.setItem('activeLogId', currentLogId);
+            } else {
+                syncBtn.disabled = false;
+                spinner.classList.add('d-none');
+                label.textContent = "Sync Bills";
+                viewLogsBtn.classList.add('d-none');
+                localStorage.removeItem('isSyncingBills');
+                localStorage.removeItem('activeLogId');
+                // ✅ Set last sync time when completed
+                const now = new Date();
+                localStorage.setItem("last_bills_sync_time", now.toISOString());
+                updateLastBillsSyncDisplay();
+            }
+        }
+    
+        function pollLog(logId) {
+            if (polling) clearInterval(polling);
+    
+            polling = setInterval(() => {
+                fetch(`/poll-sync-log/${logId}/`)
+                    .then(res => res.json())
+                    .then(data => {
+                        logBox.textContent = data.log;
+                        logBox.scrollTop = logBox.scrollHeight;
+    
+                        if (data.completed) {
+                            clearInterval(polling);
+                            setButtonState(false);
+                            logBox.textContent += "\n✅ Sync Complete!";
+                        }
+                    })
+                    .catch(err => {
+                        clearInterval(polling);
+                        logBox.textContent += "\n❌ Error loading logs.";
+                        setButtonState(false);
+                    });
+            }, 1000);
+        }
+    
+        // Reopen modal & continue polling on page refresh
+        const isSyncing = localStorage.getItem('isSyncingBills') === 'true';
+        const savedLogId = localStorage.getItem('activeLogId');
+    
+        if (isSyncing && savedLogId) {
+            currentLogId = savedLogId;
+            setButtonState(true);
+            logModal.show();
+            pollLog(currentLogId);
+        }
+    
+        // Reopen modal when clicking View Logs
+        viewLogsBtn.addEventListener('click', () => {
+            const storedLogId = localStorage.getItem('activeLogId');
+            if (storedLogId) {
+                currentLogId = storedLogId;
+                logModal.show();
+                pollLog(currentLogId);
             }
         });
+    
+        // Handle sync form submission
+        if (syncForm) {
+            syncForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                logBox.textContent = "Starting sync...\n";
+                logModal.show();
+    
+                fetch(syncForm.action, {
+                    method: "POST",
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    currentLogId = data.log_id;
+                    setButtonState(true);
+                    pollLog(currentLogId);
+                })
+                .catch(err => {
+                    logBox.textContent += `\n❌ Error starting sync: ${err}`;
+                    setButtonState(false);
+                });
+            });
+        }
+
+        function updateLastBillsSyncDisplay() {
+            const syncText = document.getElementById("last-bills-sync-time");
+            const lastTime = localStorage.getItem("last_bills_sync_time");
+            if (syncText && lastTime) {
+                const date = new Date(lastTime);
+                syncText.textContent = "🕒 Last synced: " + date.toLocaleString();
+            }
+        }
+        updateLastBillsSyncDisplay()
+
     });
-</script>
+    </script>
 
 {% endblock %}
