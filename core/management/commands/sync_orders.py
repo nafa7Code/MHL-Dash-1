@@ -1,31 +1,35 @@
-'''
-Management command to sync orders from Omniful API.
-'''
-
-import requests
-import time
-import uuid
-from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from core.models import Seller, Order
+from core.models import Seller, Order, SyncLog  # Make sure SyncLog is imported
 from decouple import config
+import requests
+import uuid
+from datetime import datetime
+import time
 
 
 class Command(BaseCommand):
     help = 'Sync orders from Omniful API for all sellers'
 
-    def handle(self, *args, **options):
-        token = config('OMNIFUL_ACCESS_TOKEN', default='')
+    def add_arguments(self, parser):
+        parser.add_argument('--log_id', type=int, help='SyncLog ID')
 
+    def handle(self, *args, **options):
+        log_id = options.get('log_id')
+        log_obj = SyncLog.objects.filter(id=log_id).first()
+
+        def log_line(text):
+            self.stdout.write(text)
+            if log_obj:
+                log_obj.log += text + "\n"
+                log_obj.save(update_fields=["log"])
+
+        token = config('OMNIFUL_ACCESS_TOKEN', default='')
         if not token:
-            self.stdout.write(self.style.ERROR(
-                'OMNIFUL_ACCESS_TOKEN not configured'))
+            log_line('❌ OMNIFUL_ACCESS_TOKEN not configured.')
             return
 
-        headers = {
-            'Authorization': f'Bearer {token}'
-        }
+        headers = {'Authorization': f'Bearer {token}'}
 
         # Step 1: Sync Sellers
         sellers = []
@@ -44,11 +48,11 @@ class Command(BaseCommand):
                 last_page = meta.get('last_page', 1)
 
                 if not seller_list:
-                    self.stdout.write(f'No more sellers found on page {page}')
+                    log_line(f"✅ No more sellers found on page {page}")
                     break
 
-                self.stdout.write(
-                    f'Syncing {len(seller_list)} sellers from page {page}')
+                log_line(
+                    f"📦 Syncing {len(seller_list)} sellers from page {page}")
 
                 for seller_data in seller_list:
                     seller_code = seller_data.get('code')
@@ -67,11 +71,8 @@ class Command(BaseCommand):
                         }
                     )
                     sellers.append(seller)
-                    if created:
-                        self.stdout.write(self.style.SUCCESS(
-                            f'Created new seller: {seller.name}'))
-                    else:
-                        self.stdout.write(f'Updated seller: {seller.name}')
+                    log_line(
+                        f"{'✅ Created' if created else '🔄 Updated'} seller: {seller.name}")
 
                 if current_page >= last_page:
                     break
@@ -79,20 +80,18 @@ class Command(BaseCommand):
                 page += 1
 
             except requests.RequestException as e:
-                self.stdout.write(self.style.ERROR(
-                    f'Failed to fetch sellers: {str(e)}'))
+                log_line(f'❌ Failed to fetch sellers: {str(e)}')
                 break
 
-        # Step 2: Sync Orders for each Seller
+        # Step 2: Sync Orders
         total_orders = 0
-
         for seller in sellers:
             if not seller.code:
-                self.stdout.write(f'Skipping seller {seller.name} - no code')
+                log_line(f"⚠️ Skipping seller {seller.name} (missing code)")
                 continue
 
-            self.stdout.write(
-                f'Syncing orders for seller {seller.name} ({seller.code})')
+            log_line(
+                f"📦 Syncing orders for seller: {seller.name} ({seller.code})")
             page = 1
 
             while True:
@@ -109,14 +108,13 @@ class Command(BaseCommand):
                     last_page = meta.get('last_page', 1)
 
                     if not orders:
-                        self.stdout.write(
-                            f'No orders found for {seller.name} on page {page}')
+                        log_line(
+                            f"✅ No orders for {seller.name} on page {page}")
                         break
 
                     for order_data in orders:
                         order_id = order_data.get('order_id')
                         omniful_id = order_data.get('id')
-
                         if not order_id or not omniful_id:
                             continue
 
@@ -128,7 +126,6 @@ class Command(BaseCommand):
 
                         shipment = order_data.get('shipment', {})
                         delivery_status = shipment.get('delivery_status', '')
-
                         try:
                             delivery_date = datetime.fromisoformat(shipment.get('order_delivered_at', '').replace(
                                 'Z', '+00:00')) if shipment.get('order_delivered_at') else None
@@ -179,13 +176,8 @@ class Command(BaseCommand):
                             }
                         )
 
-                        if created:
-                            self.stdout.write(
-                                f'  Created order: {order.order_id}')
-                        else:
-                            self.stdout.write(
-                                f'  Updated order: {order.order_id}')
-
+                        log_line(
+                            f"{'✅ Created' if created else '🔄 Updated'} order: {order.order_id}")
                         total_orders += 1
 
                     if current_page >= last_page:
@@ -193,9 +185,11 @@ class Command(BaseCommand):
                     page += 1
 
                 except requests.RequestException as e:
-                    self.stdout.write(self.style.ERROR(
-                        f'Failed to fetch orders for {seller.name}: {str(e)}'))
+                    log_line(
+                        f"❌ Failed to fetch orders for {seller.name}: {str(e)}")
                     break
 
-        self.stdout.write(self.style.SUCCESS(
-            f'Total synced orders: {total_orders}'))
+        log_line(f"🎉 Orders sync complete. Total synced: {total_orders}")
+        if log_obj:
+            log_obj.completed = True
+            log_obj.save(update_fields=["completed", "log"])
