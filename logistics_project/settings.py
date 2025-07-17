@@ -95,10 +95,7 @@ if config('USE_POSTGRESQL', default=False, cast=bool):
             'USER': config('DB_USER', default='logistics_user'),
             'PASSWORD': config('DB_PASSWORD', default=''),
             'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='5432'),
-            'OPTIONS': {
-                'charset': 'utf8',
-            },
+            'PORT': config('DB_PORT', default='5432')
         }
     }
 else:
