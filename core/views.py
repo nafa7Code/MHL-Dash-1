@@ -26,13 +26,6 @@ import re
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import redirect, render
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse, StreamingHttpResponse
-import subprocess
-from django.http import StreamingHttpResponse
-from django.utils.decorators import method_decorator
-import threading
-from .models import SyncLog
 
 
 @login_required
@@ -143,97 +136,65 @@ def omniful_sync(request):
     return render(request, 'core/omniful_sync.html', context)
 
 
-def run_sync_sellers(log_id):
-    from django.core.management import call_command
-    log = SyncLog.objects.get(id=log_id)
-    try:
-        call_command('sync_sellers', log_id=log_id)
-    except Exception as e:
-        log.log += f"\n❌ Error: {str(e)}"
-        log.completed = True
-        log.save(update_fields=["log", "completed"])
+# @login_required
+# @require_POST
+# def sync_sellers(request):
+#     """Sync sellers from Omniful API."""
+#     try:
+#         call_command('sync_sellers')
+#         messages.success(request, _('Sellers synced successfully.'))
+#     except Exception as e:
+#         messages.error(request, _('Error syncing sellers: {}').format(str(e)))
+
+#     return redirect('core:sellers_list')
 
 
-@require_POST
 @login_required
+@require_POST
 def sync_sellers(request):
-    log = SyncLog.objects.create(
-        user=request.user, log="Started syncing sellers...\n")
-    thread = threading.Thread(target=run_sync_sellers, args=(log.id,))
-    thread.start()
-    return JsonResponse({'log_id': log.id})
+    """Sync sellers from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
 
-
-@login_required
-def poll_seller_log(request, log_id):
     try:
-        log = SyncLog.objects.get(id=log_id)
-        return JsonResponse({'log': log.log, 'completed': log.completed})
-    except SyncLog.DoesNotExist:
-        return JsonResponse({'error': 'Log not found'}, status=404)
+        call_command('sync_sellers', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
+        messages.success(request, _('Sellers synced successfully.'))
 
+        # Pass the output log to the next request via session
+        request.session['sync_logs'] = output
 
-def run_sync_bills(log_id):
-    log = SyncLog.objects.get(id=log_id)
-    try:
-        call_command('sync_bills', log_id=log_id)
     except Exception as e:
-        log.log += f"\n❌ Error: {str(e)}"
-        log.completed = True
-        log.save(update_fields=["log", "completed"])
+        error_output = stderr.getvalue() + "\n" + str(e)
+        messages.error(request, _('Error syncing sellers: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
+
+    return redirect('core:sellers_list')
 
 
-@require_POST
 @login_required
+@require_POST
 def sync_bills(request):
-    log = SyncLog.objects.create(user=request.user, log="Started syncing...\n")
-    thread = threading.Thread(target=run_sync_bills, args=(log.id,))
-    thread.start()
-    return JsonResponse({'log_id': log.id})
+    """Sync Bills from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
 
-
-@login_required
-def poll_sync_log(request, log_id):
     try:
-        log = SyncLog.objects.get(id=log_id)
-        return JsonResponse({
-            'log': log.log,
-            'completed': log.completed,
-        })
-    except SyncLog.DoesNotExist:
-        return JsonResponse({'error': 'Log not found'}, status=404)
+        # Call the management command with custom stdout and stderr
+        call_command('sync_bills', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
 
+        messages.success(request, _('Bills synced successfully.'))
 
-def run_sync_orders(log_id):
-    """Threaded sync runner with SyncLog logging."""
-    log = SyncLog.objects.get(id=log_id)
-    try:
-        call_command('sync_orders', log_id=log_id)
+        # Store the output log in session for display
+        request.session['sync_logs'] = output
+
     except Exception as e:
-        log.log += f"\n❌ Error: {str(e)}"
-        log.completed = True
-        log.save(update_fields=["log", "completed"])
+        error_output = stderr.getvalue() + "\n" + str(e)
+        messages.error(request, _('Error syncing bills: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
 
-
-@require_POST
-@login_required
-def sync_orders(request):
-    """Start threaded sync and return log ID for polling."""
-    log = SyncLog.objects.create(
-        user=request.user, log="Started syncing orders...\n")
-    thread = threading.Thread(target=run_sync_orders, args=(log.id,))
-    thread.start()
-    return JsonResponse({'log_id': log.id})
-
-
-@login_required
-def poll_order_log(request, log_id):
-    """AJAX polling endpoint for order sync logs."""
-    try:
-        log = SyncLog.objects.get(id=log_id)
-        return JsonResponse({'log': log.log, 'completed': log.completed})
-    except SyncLog.DoesNotExist:
-        return JsonResponse({'error': 'Log not found'}, status=404)
+    return redirect('core:bills_list')
 
 
 @login_required
@@ -418,6 +379,30 @@ def get_fix_progress(request):
         pass
 
     return JsonResponse(progress)
+
+
+@login_required
+@require_POST
+def sync_orders(request):
+    """Sync orders from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
+    try:
+        call_command('sync_orders', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
+        messages.success(request, _(
+            'Orders synced successfully for all sellers.'))
+
+        # Save logs to session for display
+        request.session['sync_logs'] = output
+
+    except Exception as e:
+        error_output = stderr.getvalue() + "\n" + str(e)
+        messages.error(request, _('Error syncing orders: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
+
+    return redirect('core:orders_dashboard')
 
 
 @login_required

@@ -13,17 +13,13 @@
         <p class="text-muted mb-0">{% trans "Order Analytics" %}</p>
     </div>
     <div class="btn-group">
-        <form id="sync-orders-form" method="post" action="{% url 'core:sync_orders' %}">
+        <form method="post" action="{% url 'core:sync_orders' %}" style="display: inline;">
             {% csrf_token %}
-            <button id="sync-orders-btn" type="submit" class="btn btn-primary" data-syncing="false">
-                <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
-                <span class="btn-label">{% trans "Sync Orders" %}</span>
+            <input type="hidden" name="seller_code" value="{{ seller.code }}">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sync me-2"></i>{% trans "Sync Orders" %}
             </button>
         </form>
-        
-        <button id="view-orders-logs-btn" type="button" class="btn btn-outline-secondary d-none">
-            <i class="fas fa-terminal me-1"></i> {% trans "View Logs" %}
-        </button>
         <a href="{% url 'core:seller_detail' seller.guid %}" class="btn btn-outline-secondary">
             <i class="fas fa-file-invoice me-2"></i>{% trans "View Bills" %}
         </a>
@@ -442,145 +438,4 @@
         </div>
     </div>
 </div>
-
-<!-- Sync Progress Modal -->
-<div class="modal fade" id="syncLogSellerOrderModal" tabindex="-1" aria-labelledby="syncLogModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="syncLogModalLabel">{% trans "Sync Logs" %}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
-        </div>
-        <div class="modal-body">
-            <pre id="sync-log-box" style="font-family: monospace; height: 400px; overflow-y: auto;" class="bg-dark text-white p-3 rounded small"></pre>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const syncForm = document.getElementById('sync-orders-form');
-        const syncBtn = document.getElementById('sync-orders-btn');
-        const viewLogsBtn = document.getElementById('view-orders-logs-btn');
-        const logModalElement = document.getElementById('syncLogSellerOrderModal');
-        const logModal = new bootstrap.Modal(logModalElement, { backdrop: 'static', keyboard: false });
-        const logBox = document.getElementById('sync-log-box');
-        const spinner = syncBtn.querySelector('.spinner-border');
-        const label = syncBtn.querySelector('.btn-label');
-    
-        let polling = null;
-        let currentLogId = null;
-    
-        const syncingKey = "sync_orders_ongoing";
-        const logIdKey = "sync_orders_log_id";
-    
-        function setButtonState(isSyncing) {
-            if (isSyncing) {
-                syncBtn.disabled = true;
-                spinner.classList.remove('d-none');
-                label.textContent = "Syncing...";
-                viewLogsBtn.classList.remove('d-none');
-                localStorage.setItem(syncingKey, 'true');
-                localStorage.setItem(logIdKey, currentLogId);
-            } else {
-                syncBtn.disabled = false;
-                spinner.classList.add('d-none');
-                label.textContent = "Sync Orders";
-                viewLogsBtn.classList.add('d-none');
-                localStorage.removeItem(syncingKey);
-                localStorage.removeItem(logIdKey);
-    
-                const now = new Date();
-                localStorage.setItem("last_order_sync_time", now.toISOString());
-                updateLastSyncDisplay();
-            }
-        }
-    
-        function pollLog(logId) {
-            if (polling) clearInterval(polling);
-    
-            polling = setInterval(() => {
-                fetch(`/poll-order-log/${logId}/`)
-                    .then(res => res.json())
-                    .then(data => {
-                        logBox.textContent = data.log || "No logs yet...";
-                        logBox.scrollTop = logBox.scrollHeight;
-    
-                        if (data.completed) {
-                            clearInterval(polling);
-                            logBox.textContent += "\n✅ Sync Complete!";
-                            setButtonState(false);
-                        }
-                    })
-                    .catch(err => {
-                        clearInterval(polling);
-                        logBox.textContent += "\n❌ Error loading logs.";
-                        setButtonState(false);
-                    });
-            }, 1000);
-        }
-    
-        // Resume sync on refresh if needed
-        if (localStorage.getItem(syncingKey) === "true") {
-            const existingLogId = localStorage.getItem(logIdKey);
-            if (existingLogId) {
-                currentLogId = existingLogId;
-                setButtonState(true);
-                logModal.show();
-                pollLog(currentLogId);
-            }
-        }
-    
-        // View logs button click
-        viewLogsBtn.addEventListener('click', () => {
-            const storedLogId = localStorage.getItem(logIdKey);
-            if (storedLogId) {
-                currentLogId = storedLogId;
-                logModal.show();
-                pollLog(currentLogId);
-            }
-        });
-    
-        // Handle form submission
-        if (syncForm) {
-            syncForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                logBox.textContent = "Starting order sync...\n";
-                logModal.show();
-    
-                fetch(syncForm.action, {
-                    method: "POST",
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    currentLogId = data.log_id;
-                    setButtonState(true);
-                    pollLog(currentLogId);
-                })
-                .catch(err => {
-                    logBox.textContent += `\n❌ Error starting sync: ${err}`;
-                    setButtonState(false);
-                });
-            });
-        }
-    
-        // Display last sync time
-        function updateLastSyncDisplay() {
-            const syncText = document.getElementById("last-order-sync-time");
-            const lastTime = localStorage.getItem("last_order_sync_time");
-            if (syncText && lastTime) {
-                const date = new Date(lastTime);
-                syncText.textContent = "🕒 Last synced: " + date.toLocaleString();
-            }
-        }
-        updateLastSyncDisplay();
-    });
-    </script>
 {% endblock %}

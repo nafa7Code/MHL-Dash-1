@@ -10,7 +10,7 @@ class TimeStampedModel(models.Model):
     """Base model with created and updated timestamps."""
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
         abstract = True
 
@@ -19,11 +19,9 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)
-    company = models.ForeignKey(
-        'Company', on_delete=models.SET_NULL, null=True, blank=True)
-    preferred_language = models.CharField(
-        max_length=10, choices=[('en', 'English'), ('ar', 'Arabic')], default='en')
-
+    company = models.ForeignKey('Company', on_delete=models.SET_NULL, null=True, blank=True)
+    preferred_language = models.CharField(max_length=10, choices=[('en', 'English'), ('ar', 'Arabic')], default='en')
+    
     def __str__(self):
         return f"{self.user.username}'s profile"
 
@@ -48,10 +46,10 @@ class Company(models.Model):
     logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     def __str__(self):
         return self.name
-
+    
     class Meta:
         verbose_name_plural = "Companies"
 
@@ -63,8 +61,7 @@ class Seller(models.Model):
     email = models.EmailField(max_length=255, blank=True, null=True)
     code = models.CharField(max_length=100, blank=True, null=True)
     address = models.JSONField(blank=True, null=True)
-    # <-- ADD THIS FIELD for is_active
-    is_active = models.BooleanField(default=True, db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True) # <-- ADD THIS FIELD for is_active
 
     created_at_api = models.DateTimeField(null=True, blank=True)
     updated_at_api = models.DateTimeField(null=True, blank=True)
@@ -84,57 +81,43 @@ class VendorBill(models.Model):
     # RECOMMENDATION: Let Django create its default 'id' PK
     # If you remove primary_key=True, Django will automatically add 'id' as the PK.
     # This is generally preferred unless 'name' is truly a stable, immutable, and unique identifier for *all* bills.
-    # REMOVED: primary_key=True
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255, unique=True) # REMOVED: primary_key=True
 
-    seller = models.ForeignKey(
-        Seller, on_delete=models.PROTECT, related_name='vendor_bills')
-
+    seller = models.ForeignKey(Seller, on_delete=models.PROTECT, related_name='vendor_bills')
+    
     # JSON fields should allow null if default=list, to be consistent with DB TEXT NULLable
-    hubs = models.JSONField(default=list, blank=True,
-                            null=True)  # Added null=True
+    hubs = models.JSONField(default=list, blank=True, null=True) # Added null=True
     status = models.CharField(max_length=50, default='draft')
-
+    
     # URLField allows blank and null by default
     pdf = models.URLField(max_length=500, blank=True, null=True)
-
-    contract_name = models.CharField(
-        max_length=255, blank=True, null=True)  # Added blank=True, null=True
-
+    
+    contract_name = models.CharField(max_length=255, blank=True, null=True) # Added blank=True, null=True
+    
     # Date and Time Fields - Ensure these are DateTimeField as per sync script
     period_start_date = models.DateTimeField(null=True, blank=True)
     period_end_date = models.DateTimeField(null=True, blank=True)
     due_date = models.DateTimeField(null=True, blank=True)
-
+    
     currency = models.CharField(max_length=10, default='USD')
-    grand_total = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
-    discount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
-    grand_total_after_discount = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.00)
+    grand_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    grand_total_after_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     # These should be nullable
     finalised_on = models.DateTimeField(null=True, blank=True)
     # finalised_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True) # If linking to User
-    # Changed to allow null/blank
-    finalised_by = models.CharField(max_length=255, blank=True, null=True)
-    # Added blank=True, null=True
-    remark = models.TextField(blank=True, null=True)
-
+    finalised_by = models.CharField(max_length=255, blank=True, null=True) # Changed to allow null/blank
+    remark = models.TextField(blank=True, null=True) # Added blank=True, null=True
+    
     # JSON fields should allow null if default=list, to be consistent with DB TEXT NULLable
-    fees = models.JSONField(default=list, blank=True,
-                            null=True)  # Added null=True
-    hub_bills = models.JSONField(
-        default=list, blank=True, null=True)  # Added null=True
+    fees = models.JSONField(default=list, blank=True, null=True) # Added null=True
+    hub_bills = models.JSONField(default=list, blank=True, null=True) # Added null=True
 
     # New timestamp fields (from API and local)
-    created_at_api = models.DateTimeField(
-        null=True, blank=True)  # Timestamp from Omniful API
-    created_at_local = models.DateTimeField(
-        auto_now_add=True)   # Timestamp when saved to your DB
-    # Timestamp when last updated in your DB
-    updated_at_local = models.DateTimeField(auto_now=True)
+    created_at_api = models.DateTimeField(null=True, blank=True) # Timestamp from Omniful API
+    created_at_local = models.DateTimeField(auto_now_add=True)   # Timestamp when saved to your DB
+    updated_at_local = models.DateTimeField(auto_now=True)       # Timestamp when last updated in your DB
 
     def __str__(self):
         return self.name
@@ -253,12 +236,3 @@ class Order(models.Model):
                 self.is_delayed = True
 
         super().save(*args, **kwargs)
-
-
-class SyncLog(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    log = models.TextField(blank=True)
-    completed = models.BooleanField(default=False)
-    user = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True)
