@@ -24,26 +24,21 @@ class Command(BaseCommand):
         from core.models import SyncLog
         import time
 
-        token = config('OMNIFUL_ACCESS_TOKEN', default='')
-
-        if not token:
-            self.stdout.write(self.style.ERROR(
-                '❌ OMNIFUL_ACCESS_TOKEN not configured'))
-            return
-
         log_id = options.get('log_id')
-        log_obj = None
-        if log_id:
-            try:
-                log_obj = SyncLog.objects.get(id=log_id)
-            except SyncLog.DoesNotExist:
-                self.stdout.write("❌ Invalid log ID")
+        log_obj = SyncLog.objects.filter(id=log_id).first()
 
         def log_line(text):
+            self.stdout.write(text)
             if log_obj:
                 log_obj.log += text + "\n"
                 log_obj.save(update_fields=["log"])
-            self.stdout.write(text)
+
+        token = config('OMNIFUL_ACCESS_TOKEN', default='')
+        if not token:
+            log_line('❌ OMNIFUL_ACCESS_TOKEN not configured.')
+            log_obj.completed = True
+            log_obj.save(update_fields=["completed", "log"])
+            return
 
         headers = {
             'Authorization': f'Bearer {token}'

@@ -598,28 +598,36 @@
         }
     
         function pollLog(logId) {
-            if (polling) clearInterval(polling);
-    
-            polling = setInterval(() => {
-                fetch(`/poll-order-log/${logId}/`)
-                    .then(res => res.json())
+            function doPoll() {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 10000); // 10 sec timeout
+
+                fetch(`/poll-order-log/${logId}/`, { signal: controller.signal })
+                    .then(res => {
+                        clearTimeout(timeout);
+                        if (!res.ok) throw new Error('Server error');
+                        return res.json();
+                    })
                     .then(data => {
                         logBox.textContent = data.log || "No logs yet...";
                         logBox.scrollTop = logBox.scrollHeight;
-    
+
                         if (data.completed) {
-                            clearInterval(polling);
                             logBox.textContent += "\n✅ Sync Complete!";
                             setButtonState(false);
+                        } else {
+                            setTimeout(doPoll, 3000); // Poll again
                         }
                     })
                     .catch(err => {
-                        clearInterval(polling);
-                        logBox.textContent += "\n❌ Error loading logs.";
+                        logBox.textContent += `\n❌ Polling stopped: ${err.name === 'AbortError' ? 'Server timeout (10s)' : err.message}`;
                         setButtonState(false);
                     });
-            }, 3000);
+            }
+
+            doPoll(); // Start polling
         }
+
     
         // Resume sync on refresh if needed
         if (localStorage.getItem(syncingKey) === "true") {

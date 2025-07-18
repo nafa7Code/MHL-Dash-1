@@ -25,6 +25,8 @@ class Command(BaseCommand):
         token = config('OMNIFUL_ACCESS_TOKEN', default='')
         if not token:
             log_line('❌ OMNIFUL_ACCESS_TOKEN not configured.')
+            log_obj.completed = True
+            log_obj.save(update_fields=["completed", "log"])
             return
 
         headers = {'Authorization': f'Bearer {token}',

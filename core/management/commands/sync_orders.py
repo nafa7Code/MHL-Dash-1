@@ -27,6 +27,8 @@ class Command(BaseCommand):
         token = config('OMNIFUL_ACCESS_TOKEN', default='')
         if not token:
             log_line('❌ OMNIFUL_ACCESS_TOKEN not configured.')
+            log_obj.completed = True
+            log_obj.save(update_fields=["completed", "log"])
             return
 
         headers = {'Authorization': f'Bearer {token}'}
@@ -174,7 +176,6 @@ class Command(BaseCommand):
                                 'expected_delivery_epoch': order_data.get('expected_delivery_epoch', 0),
                                 'invoice': order_data.get('invoice', {}),
                                 'raw_data': order_data,
-                                'total_orders': total_orders,
                             }
                         )
 

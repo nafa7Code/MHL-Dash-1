@@ -255,7 +255,8 @@ def refresh_bill(request, bill_name):
 @login_required
 def sellers_list(request):
     """List all sellers and optionally display sync logs."""
-    sellers = Seller.objects.all().order_by('name')
+    # sellers = Seller.objects.all().order_by('name')
+    sellers = Seller.objects.all().order_by('-created_at_api')
     total_sellers = sellers.count()
 
     # Get logs from session (set after sync), then clear so they show only once
