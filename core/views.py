@@ -3,6 +3,8 @@ Core views for the logistics application.
 Contains dashboard and common functionality.
 """
 
+from core.models import Seller, SyncStatus
+from django.shortcuts import render
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -146,97 +148,249 @@ def omniful_sync(request):
     return render(request, 'core/omniful_sync.html', context)
 
 
-def run_sync_sellers(log_id):
-    from django.core.management import call_command
-    log = SyncLog.objects.get(id=log_id)
-    try:
-        call_command('sync_sellers', log_id=log_id)
-    except Exception as e:
-        log.log += f"\n❌ Error: {str(e)}"
-        log.completed = True
-        log.save(update_fields=["log", "completed"])
-
-
+@login_required
 @require_POST
-@login_required
 def sync_sellers(request):
-    log = SyncLog.objects.create(
-        user=request.user, log="Started syncing sellers...\n")
-    thread = threading.Thread(target=run_sync_sellers, args=(log.id,))
-    thread.start()
-    return JsonResponse({'log_id': log.id})
+    """Sync sellers from Omniful API and capture logs."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
+    try:
+        call_command('sync_sellers', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
+        messages.success(request, _('Sellers synced successfully.'))
+
+        # Store the log in session
+        request.session['sync_logs'] = output
+
+    except Exception as e:
+        error_output = stderr.getvalue() + "\n" + str(e)
+        messages.error(request, _('Error syncing sellers: {}').format(str(e)))
+        request.session['sync_logs'] = error_output
 
 
 @login_required
-def poll_seller_log(request, log_id):
-    try:
-        log = SyncLog.objects.get(id=log_id)
-        return JsonResponse({'log': log.log, 'completed': log.completed})
-    except SyncLog.DoesNotExist:
-        return JsonResponse({'error': 'Log not found'}, status=404)
+def sellers_list(request):
+    sellers = Seller.objects.all().order_by('-created_at_api')
+    total_sellers = sellers.count()
 
+    # Get latest sync time
+    last_synced_at = SyncStatus.objects.filter(key='sellers').first()
+    last_synced_at = last_synced_at.last_synced_at if last_synced_at else None
 
-def run_sync_bills(log_id):
-    log = SyncLog.objects.get(id=log_id)
-    try:
-        call_command('sync_bills', log_id=log_id)
-    except Exception as e:
-        log.log += f"\n❌ Error: {str(e)}"
-        log.completed = True
-        log.save(update_fields=["log", "completed"])
+    # Get latest log from SyncLog model
+    latest_log = SyncLog.objects.filter(key='sellers').first()
+
+    return render(request, 'core/sellers_list.html', {
+        'sellers': sellers,
+        'total_sellers': total_sellers,
+        'last_synced_at': last_synced_at,
+        'sync_logs': latest_log.content if latest_log else None,
+    })
 
 
 @require_POST
 @login_required
 def sync_bills(request):
-    log = SyncLog.objects.create(user=request.user, log="Started syncing...\n")
-    thread = threading.Thread(target=run_sync_bills, args=(log.id,))
-    thread.start()
-    return JsonResponse({'log_id': log.id})
+    """Sync bills from Omniful API and capture logs in DB."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
 
-
-@login_required
-def poll_sync_log(request, log_id):
     try:
-        log = SyncLog.objects.get(id=log_id)
-        return JsonResponse({
-            'log': log.log,
-            'completed': log.completed,
-        })
-    except SyncLog.DoesNotExist:
-        return JsonResponse({'error': 'Log not found'}, status=404)
+        call_command('sync_bills', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
+        messages.success(request, _('Vendor bills synced successfully.'))
 
-
-def run_sync_orders(log_id):
-    """Threaded sync runner with SyncLog logging."""
-    log = SyncLog.objects.get(id=log_id)
-    try:
-        call_command('sync_orders', log_id=log_id)
     except Exception as e:
-        log.log += f"\n❌ Error: {str(e)}"
-        log.completed = True
-        log.save(update_fields=["log", "completed"])
+        error_output = stderr.getvalue() + '\n' + str(e)
+        messages.error(request, _(
+            'Error syncing vendor bills: {}').format(str(e)))
+        # Optional: also store error log to SyncLog if needed
+        SyncLog.objects.update_or_create(
+            key='vendor_bills',
+            defaults={'content': error_output}
+        )
+
+    return redirect('core:bills_list')
 
 
+@login_required
+def bills_list(request):
+    """List vendor bills and show last sync info and logs."""
+    bills = VendorBill.objects.select_related(
+        'seller').order_by('-created_at_api')
+    total_bills = bills.count()
+
+    # Get last sync time from SyncStatus
+    last_synced = SyncStatus.objects.filter(key='vendor_bills').first()
+    last_synced_at = last_synced.last_synced_at if last_synced else None
+
+    # Get latest sync logs from SyncLog
+    sync_log = SyncLog.objects.filter(key='vendor_bills').first()
+    sync_logs = sync_log.content if sync_log else None
+
+    return render(request, 'core/bills_list.html', {
+        'bills': bills,
+        'total_bills': total_bills,
+        'last_synced_at': last_synced_at,
+        'sync_logs': sync_logs,
+    })
+
+
+@login_required
 @require_POST
-@login_required
 def sync_orders(request):
-    """Start threaded sync and return log ID for polling."""
-    log = SyncLog.objects.create(
-        user=request.user, log="Started syncing orders...\n")
-    thread = threading.Thread(target=run_sync_orders, args=(log.id,))
-    thread.start()
-    return JsonResponse({'log_id': log.id})
+    """Sync orders from Omniful API and capture logs in DB."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
+    try:
+        call_command('sync_orders', stdout=stdout, stderr=stderr)
+        output = stdout.getvalue()
+        messages.success(request, _('Orders synced successfully.'))
+
+    except Exception as e:
+        error_output = stderr.getvalue() + "\n" + str(e)
+        messages.error(request, _('Error syncing orders: {}').format(str(e)))
 
 
 @login_required
-def poll_order_log(request, log_id):
-    """AJAX polling endpoint for order sync logs."""
-    try:
-        log = SyncLog.objects.get(id=log_id)
-        return JsonResponse({'log': log.log, 'completed': log.completed})
-    except SyncLog.DoesNotExist:
-        return JsonResponse({'error': 'Log not found'}, status=404)
+def orders_dashboard(request):
+    """Main orders KPI dashboard."""
+    # Last sync timestamp
+    last_synced_at = SyncStatus.objects.filter(key='orders').first()
+    last_synced_at = last_synced_at.last_synced_at if last_synced_at else None
+
+    # Latest log
+    latest_log = SyncLog.objects.filter(
+        key='orders').order_by('-created_at').first()
+    # Get filters
+    seller_code = request.GET.get('seller')
+    order_type = request.GET.get('type')  # B2B or B2C
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    status = request.GET.get('status')
+    payment_mode = request.GET.get('payment_mode')
+
+    # Base queryset
+    orders = Order.objects.all()
+    # Apply filters
+    if seller_code:
+        orders = orders.filter(seller__code=seller_code)
+
+    if order_type:
+        orders = orders.filter(order_type=order_type)
+
+    if date_from:
+        try:
+            date_from = datetime.strptime(date_from, '%Y-%m-%d')
+            orders = orders.filter(order_created_at__gte=date_from)
+        except:
+            pass
+
+    if date_to:
+        try:
+            date_to = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to = date_to.replace(hour=23, minute=59, second=59)
+            orders = orders.filter(order_created_at__lte=date_to)
+        except:
+            pass
+
+    if status:
+        orders = orders.filter(status_code=status)
+
+    if payment_mode:
+        orders = orders.filter(payment_mode=payment_mode)
+
+    # Calculate KPIs
+    total_orders = orders.count()
+    b2b_orders = orders.filter(order_type='B2B').count()
+    b2c_orders = orders.filter(order_type='B2C').count()
+
+    # Status breakdown
+    status_counts = orders.values('status_code').annotate(count=Count('id'))
+
+    # Payment mode breakdown
+    payment_counts = orders.values('payment_mode').annotate(count=Count('id'))
+
+    # Delivery time metrics
+    avg_delivery_time = orders.exclude(days_to_deliver__isnull=True).aggregate(
+        avg=Avg('days_to_deliver'))['avg'] or 0
+
+    # Delay metrics
+    delayed_orders = orders.filter(is_delayed=True).count()
+    on_time_rate = (total_orders - delayed_orders) / \
+        total_orders * 100 if total_orders > 0 else 0
+
+    # Delay categories
+    green_orders = orders.filter(delay_category='green').count()
+    yellow_orders = orders.filter(delay_category='yellow').count()
+    red_orders = orders.filter(delay_category='red').count()
+
+    # red_orders rows
+    red_orders_qs = (
+        orders
+        .annotate(
+            status_clean=Trim(Lower(F('status_code')))
+        )
+        .filter(
+            order_created_at__gte=timezone.now() - timedelta(days=30),  # 🔄 within last 30 days
+            order_created_at__lt=timezone.now() - timedelta(days=10)    # ⬅️ older than 10 days
+        )
+        .exclude(
+            status_clean='delivered'
+        )
+        .order_by('-order_created_at')
+    )
+
+    red_orders_count = red_orders_qs.count()
+
+    # New orders delayed (>2 days)
+    new_orders_delayed = orders.filter(
+        status_code='new_order',
+        order_created_at__lt=timezone.now() - timedelta(days=2)
+    ).count()
+
+    # Top regions
+    top_regions = orders.values('shipping_city').annotate(
+        count=Count('id')
+    ).order_by('-count')[:5]
+
+    # Recent orders
+    recent_orders = orders.order_by('-order_created_at')[:10]
+
+    # Get all sellers for filter dropdown
+    sellers = Seller.objects.filter(is_active=True).order_by('name')
+
+    context = {
+        'total_orders': total_orders,
+        'b2b_orders': b2b_orders,
+        'b2c_orders': b2c_orders,
+        'status_counts': status_counts,
+        'payment_counts': payment_counts,
+        'avg_delivery_time': round(avg_delivery_time, 1),
+        'delayed_orders': delayed_orders,
+        'on_time_rate': round(on_time_rate, 1),
+        'green_orders': green_orders,
+        'yellow_orders': yellow_orders,
+        'red_orders': red_orders,
+        'new_orders_delayed': new_orders_delayed,
+        'top_regions': top_regions,
+        'recent_orders': recent_orders,
+        'sellers': sellers,
+        'selected_seller': seller_code,
+        'selected_type': order_type,
+        'selected_status': status,
+        'selected_payment': payment_mode,
+        'date_from': date_from,
+        'date_to': date_to,
+        'red_orders_qs': red_orders_qs,
+        'red_orders_count': red_orders_count,
+        'last_synced_at': last_synced_at,
+        'sync_logs': latest_log.content if latest_log else None,
+    }
+
+    return render(request, 'core/orders_dashboard.html', context)
 
 
 @login_required
@@ -253,23 +407,6 @@ def refresh_bill(request, bill_name):
 
 
 @login_required
-def sellers_list(request):
-    """List all sellers and optionally display sync logs."""
-    # sellers = Seller.objects.all().order_by('name')
-    sellers = Seller.objects.all().order_by('-created_at_api')
-    total_sellers = sellers.count()
-
-    # Get logs from session (set after sync), then clear so they show only once
-    sync_logs = request.session.pop('sync_logs', None)
-
-    return render(request, 'core/sellers_list.html', {
-        'sellers': sellers,
-        'total_sellers': total_sellers,
-        'sync_logs': sync_logs,
-    })
-
-
-@login_required
 def seller_detail(request, guid):
     """Seller detail page with related bills."""
     seller = get_object_or_404(Seller, guid=guid)
@@ -282,24 +419,6 @@ def seller_detail(request, guid):
         'bills_count': bills.count(),
     }
     return render(request, 'core/seller_detail.html', context)
-
-
-@login_required
-def bills_list(request):
-    """List all vendor bills."""
-    bills = VendorBill.objects.select_related(
-        'seller').order_by('-created_at_api')
-
-    # Extract and remove sync_logs from session (if available)
-    sync_logs = request.session.pop('sync_logs', None)
-
-    context = {
-        'bills': bills,
-        'total_bills': bills.count(),
-        'sync_logs': sync_logs,
-    }
-
-    return render(request, 'core/bills_list.html', context)
 
 
 @login_required
@@ -525,138 +644,6 @@ def get_orders_sync_progress(request):
         pass
 
     return JsonResponse(progress)
-
-
-@login_required
-def orders_dashboard(request):
-    """Main orders KPI dashboard."""
-    sync_logs = request.session.pop('sync_logs', None)
-    # Get filters
-    seller_code = request.GET.get('seller')
-    order_type = request.GET.get('type')  # B2B or B2C
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    status = request.GET.get('status')
-    payment_mode = request.GET.get('payment_mode')
-
-    # Base queryset
-    orders = Order.objects.all()
-    # Apply filters
-    if seller_code:
-        orders = orders.filter(seller__code=seller_code)
-
-    if order_type:
-        orders = orders.filter(order_type=order_type)
-
-    if date_from:
-        try:
-            date_from = datetime.strptime(date_from, '%Y-%m-%d')
-            orders = orders.filter(order_created_at__gte=date_from)
-        except:
-            pass
-
-    if date_to:
-        try:
-            date_to = datetime.strptime(date_to, '%Y-%m-%d')
-            date_to = date_to.replace(hour=23, minute=59, second=59)
-            orders = orders.filter(order_created_at__lte=date_to)
-        except:
-            pass
-
-    if status:
-        orders = orders.filter(status_code=status)
-
-    if payment_mode:
-        orders = orders.filter(payment_mode=payment_mode)
-
-    # Calculate KPIs
-    total_orders = orders.count()
-    b2b_orders = orders.filter(order_type='B2B').count()
-    b2c_orders = orders.filter(order_type='B2C').count()
-
-    # Status breakdown
-    status_counts = orders.values('status_code').annotate(count=Count('id'))
-
-    # Payment mode breakdown
-    payment_counts = orders.values('payment_mode').annotate(count=Count('id'))
-
-    # Delivery time metrics
-    avg_delivery_time = orders.exclude(days_to_deliver__isnull=True).aggregate(
-        avg=Avg('days_to_deliver'))['avg'] or 0
-
-    # Delay metrics
-    delayed_orders = orders.filter(is_delayed=True).count()
-    on_time_rate = (total_orders - delayed_orders) / \
-        total_orders * 100 if total_orders > 0 else 0
-
-    # Delay categories
-    green_orders = orders.filter(delay_category='green').count()
-    yellow_orders = orders.filter(delay_category='yellow').count()
-    red_orders = orders.filter(delay_category='red').count()
-
-    # red_orders rows
-    red_orders_qs = (
-        orders
-        .annotate(
-            status_clean=Trim(Lower(F('status_code')))
-        )
-        .filter(
-            order_created_at__gte=timezone.now() - timedelta(days=30),  # 🔄 within last 30 days
-            order_created_at__lt=timezone.now() - timedelta(days=10)    # ⬅️ older than 10 days
-        )
-        .exclude(
-            status_clean='delivered'
-        )
-        .order_by('-order_created_at')
-    )
-
-    red_orders_count = red_orders_qs.count()
-
-    # New orders delayed (>2 days)
-    new_orders_delayed = orders.filter(
-        status_code='new_order',
-        order_created_at__lt=timezone.now() - timedelta(days=2)
-    ).count()
-
-    # Top regions
-    top_regions = orders.values('shipping_city').annotate(
-        count=Count('id')
-    ).order_by('-count')[:5]
-
-    # Recent orders
-    recent_orders = orders.order_by('-order_created_at')[:10]
-
-    # Get all sellers for filter dropdown
-    sellers = Seller.objects.filter(is_active=True).order_by('name')
-
-    context = {
-        'total_orders': total_orders,
-        'b2b_orders': b2b_orders,
-        'b2c_orders': b2c_orders,
-        'status_counts': status_counts,
-        'payment_counts': payment_counts,
-        'avg_delivery_time': round(avg_delivery_time, 1),
-        'delayed_orders': delayed_orders,
-        'on_time_rate': round(on_time_rate, 1),
-        'green_orders': green_orders,
-        'yellow_orders': yellow_orders,
-        'red_orders': red_orders,
-        'new_orders_delayed': new_orders_delayed,
-        'top_regions': top_regions,
-        'recent_orders': recent_orders,
-        'sellers': sellers,
-        'selected_seller': seller_code,
-        'selected_type': order_type,
-        'selected_status': status,
-        'selected_payment': payment_mode,
-        'date_from': date_from,
-        'date_to': date_to,
-        'sync_logs': sync_logs,
-        'red_orders_qs': red_orders_qs,
-        'red_orders_count': red_orders_count,
-    }
-
-    return render(request, 'core/orders_dashboard.html', context)
 
 
 @login_required

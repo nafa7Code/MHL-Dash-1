@@ -49,6 +49,13 @@ INSTALLED_APPS = [
     # Local apps
     'core',
     'accounts',
+    'django_cron',
+]
+
+CRON_CLASSES = [
+    "core.cron.SyncSellersCronJob",
+    "core.cron.SyncOrdersCronJob",
+    "core.cron.SyncBillsCronJob",
 ]
 
 MIDDLEWARE = [
@@ -143,7 +150,7 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Riyadh'
 
 USE_I18N = True
 USE_L10N = True

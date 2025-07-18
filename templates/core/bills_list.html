@@ -7,6 +7,8 @@
 
 {% block content %}
 
+
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-0">{% trans "Vendor Bills" %}</h1>
@@ -15,7 +17,7 @@
 
     </div>
     <div class="btn-group">
-        <form id="sync-bills-form" method="post" action="{% url 'core:sync_bills' %}">
+        <!-- <form id="sync-bills-form" method="post" action="{% url 'core:sync_bills' %}">
             {% csrf_token %}
             <button id="sync-bills-btn" type="submit" class="btn btn-primary" data-syncing="false">
               <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
@@ -25,7 +27,7 @@
         
           <button id="view-logs-btn" type="button" class="btn btn-outline-secondary d-none">
             <i class="fas fa-terminal me-1"></i> {% trans "View Logs" %}
-          </button>
+          </button> -->
           
           
         <!-- <form method="post" action="{% url 'core:sync_bills' %}" style="display: inline;">
@@ -46,6 +48,25 @@
         </a> -->
     </div>
 </div>
+
+{% if last_synced_at %}
+<p class="text-muted small mb-2">
+    <strong>Last Synced At:</strong> {{ last_synced_at|date:"Y-m-d H:i:s" }}
+</p>
+{% endif %}
+
+{% if sync_logs %}
+<div class="mb-4">
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#syncLogCollapse">
+        View Sync Logs
+    </button>
+    <div class="collapse mt-2" id="syncLogCollapse">
+        <pre class="bg-light border p-3 rounded small" style="max-height: 300px; overflow-y: auto;">
+{{ sync_logs }}
+        </pre>
+    </div>
+</div>
+{% endif %}
 
 <div class="row mb-4">
     <div class="col-md-3">
@@ -93,7 +114,7 @@
                         </td>
                         <td>
                             {% if bill.grand_total %}
-                            <strong>${{ bill.grand_total|floatformat:2|intcomma }}</strong>
+                            <strong>{{ bill.grand_total|floatformat:2|intcomma }}</strong>
                             {% else %}
                             <span class="text-muted">-</span>
                             {% endif %}
@@ -185,36 +206,28 @@
         }
     
         function pollLog(logId) {
-            function doPoll() {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 10000); // 10 sec timeout
-
-                fetch(`/poll-order-log/${logId}/`, { signal: controller.signal })
-                    .then(res => {
-                        clearTimeout(timeout);
-                        if (!res.ok) throw new Error('Server error');
-                        return res.json();
-                    })
+            if (polling) clearInterval(polling);
+    
+            polling = setInterval(() => {
+                fetch(`/poll-sync-log/${logId}/`)
+                    .then(res => res.json())
                     .then(data => {
-                        logBox.textContent = data.log || "No logs yet...";
+                        logBox.textContent = data.log;
                         logBox.scrollTop = logBox.scrollHeight;
-
+    
                         if (data.completed) {
-                            logBox.textContent += "\n✅ Sync Complete!";
+                            clearInterval(polling);
                             setButtonState(false);
-                        } else {
-                            setTimeout(doPoll, 3000); // Poll again
+                            logBox.textContent += "\n✅ Sync Complete!";
                         }
                     })
                     .catch(err => {
-                        logBox.textContent += `\n❌ Polling stopped: ${err.name === 'AbortError' ? 'Server timeout (10s)' : err.message}`;
+                        clearInterval(polling);
+                        logBox.textContent += "\n❌ Error loading logs.";
                         setButtonState(false);
                     });
-            }
-
-            doPoll(); // Start polling
+            }, 3000);
         }
-
     
         // Reopen modal & continue polling on page refresh
         const isSyncing = localStorage.getItem('isSyncingBills') === 'true';

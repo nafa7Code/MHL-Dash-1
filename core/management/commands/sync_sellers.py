@@ -1,53 +1,60 @@
-# sync_sellers.py
-from core.models import Seller, SyncLog  # Ensure SyncLog is imported
 from django.core.management.base import BaseCommand
+from core.models import Seller, SyncStatus, SyncLog
 from decouple import config
 from dateutil import parser
+from django.utils.timezone import now
 import requests
 
 
 class Command(BaseCommand):
     help = 'Sync sellers from Omniful API'
 
-    def add_arguments(self, parser):
-        parser.add_argument('--log_id', type=int, help='SyncLog ID')
-
     def handle(self, *args, **options):
-        log_id = options.get('log_id')
-        log_obj = SyncLog.objects.filter(id=log_id).first()
+        log_lines = []
 
-        def log_line(text):
-            self.stdout.write(text)
-            if log_obj:
-                log_obj.log += text + "\n"
-                log_obj.save(update_fields=["log"])
+        # Use passed-in stdout (for call_command) or default to self.stdout
+        stdout = options.get('stdout', self.stdout)
+
+        def log(msg):
+            log_lines.append(msg)
+            stdout.write(msg + "\n")  # Ensure newline
+            stdout.flush()
 
         token = config('OMNIFUL_ACCESS_TOKEN', default='')
         if not token:
-            log_line('❌ OMNIFUL_ACCESS_TOKEN not configured.')
-            log_obj.completed = True
-            log_obj.save(update_fields=["completed", "log"])
+            log("❌ OMNIFUL_ACCESS_TOKEN not set in .env file")
             return
 
-        headers = {'Authorization': f'Bearer {token}',
-                   'Content-Type': 'application/json'}
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+
         page = 1
-        total_created = total_updated = 0
+        total_created = total_updated = total_synced = 0
 
         while True:
             url = f'https://prodapi.omniful.com/sales-channel/public/v1/tenants/sellers?page={page}&per_page=100'
+
             try:
-                log_line(f"📦 Fetching sellers page {page}...")
+                log(f'🌐 Fetching page {page} from {url}')
                 response = requests.get(url, headers=headers, timeout=30)
                 response.raise_for_status()
                 data = response.json()
 
-                sellers = data.get('data', [])
-                if not sellers:
-                    log_line("✅ No more sellers. Sync complete.")
+                sellers_data = data.get('data', [])
+                current_page = data.get('current_page', page)
+                last_page = data.get('last_page', page)
+
+                if not sellers_data:
                     break
 
-                for seller_data in sellers:
+                log(
+                    f'🔄 Processing page {current_page} of {last_page} '
+                    f'({len(sellers_data)} sellers)'
+                )
+
+                for seller_data in sellers_data:
                     seller, created = Seller.objects.update_or_create(
                         code=seller_data.get('code'),
                         defaults={
@@ -61,26 +68,42 @@ class Command(BaseCommand):
                             'address': seller_data.get('address', {}),
                         }
                     )
-                    log_line(
-                        f"{'✅ Created' if created else '🔄 Updated'} seller: {seller.name}")
                     if created:
                         total_created += 1
+                        log(f'✅ Created: {seller.name} (GUID: {seller.guid})')
                     else:
                         total_updated += 1
+                        log(f'♻️ Updated: {seller.name} (GUID: {seller.guid})')
+
+                    total_synced += 1
 
                 page += 1
+
+            except requests.exceptions.RequestException as e:
+                log(f'❌ Request error: {str(e)}')
+                break
             except Exception as e:
-                log_line(f"❌ Error: {str(e)}")
+                import traceback
+                log(f'🔥 Unexpected error: {str(e)}')
+                log(traceback.format_exc())
                 break
 
-        if log_obj:
-            log_obj.completed = True
-            log_obj.save(update_fields=["completed", "log"])
-        log_line(
-            f"🎉 Sync complete: {total_created} created, {total_updated} updated.")
+        # Save last synced time
+        SyncStatus.objects.update_or_create(
+            key='sellers',
+            defaults={'last_synced_at': now()}
+        )
 
-        # if log_obj:
-        #     log_obj.completed = True
-        #     log_obj.save(update_fields=["completed"])
-        #     time.sleep(3)
-        #     log_obj.delete()
+        summary = (
+            f"\n✅ Sync Complete!\n"
+            f"Created: {total_created}\n"
+            f"Updated: {total_updated}\n"
+            f"Total Synced: {total_synced}"
+        )
+        log(summary)
+
+        # Save logs to database
+        SyncLog.objects.update_or_create(
+            key='sellers',
+            defaults={'content': '\n'.join(log_lines)}
+        )

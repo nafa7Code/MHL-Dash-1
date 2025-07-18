@@ -1,100 +1,79 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from core.models import Seller, Order, SyncLog  # Make sure SyncLog is imported
+from core.models import Seller, Order, SyncStatus, SyncLog
 from decouple import config
-import requests
-import uuid
 from datetime import datetime
-import time
+import requests
+import traceback
 
 
 class Command(BaseCommand):
     help = 'Sync orders from Omniful API for all sellers'
 
-    def add_arguments(self, parser):
-        parser.add_argument('--log_id', type=int, help='SyncLog ID')
-
     def handle(self, *args, **options):
-        log_id = options.get('log_id')
-        log_obj = SyncLog.objects.filter(id=log_id).first()
+        log_lines = []
+        stdout = options.get('stdout', self.stdout)
 
-        def log_line(text):
-            self.stdout.write(text)
-            if log_obj:
-                log_obj.log += text + "\n"
-                log_obj.save(update_fields=["log"])
+        def log(msg):
+            log_lines.append(msg)
+            stdout.write(msg + "\n")
+            stdout.flush()
 
         token = config('OMNIFUL_ACCESS_TOKEN', default='')
         if not token:
-            log_line('❌ OMNIFUL_ACCESS_TOKEN not configured.')
-            log_obj.completed = True
-            log_obj.save(update_fields=["completed", "log"])
+            log("❌ OMNIFUL_ACCESS_TOKEN not set in .env file")
             return
 
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
 
-        # Step 1: Sync Sellers
+        # Step 1: Fetch all sellers
         sellers = []
         page = 1
         while True:
-            seller_url = f'https://prodapi.omniful.com/sales-channel/public/v1/tenants/sellers?page={page}&per_page=100'
+            url = f'https://prodapi.omniful.com/sales-channel/public/v1/tenants/sellers?page={page}&per_page=100'
             try:
-                response = requests.get(
-                    seller_url, headers=headers, timeout=30)
+                log(f"🌐 Fetching sellers from page {page}")
+                response = requests.get(url, headers=headers, timeout=30)
                 response.raise_for_status()
                 data = response.json()
 
-                seller_list = data.get('data', [])
+                seller_data_list = data.get('data', [])
                 meta = data.get('meta', {})
                 current_page = meta.get('current_page', page)
-                last_page = meta.get('last_page', 1)
+                last_page = meta.get('last_page', page)
 
-                if not seller_list:
-                    log_line(f"✅ No more sellers found on page {page}")
+                if not seller_data_list:
+                    log("✅ No more sellers found.")
                     break
 
-                log_line(
-                    f"📦 Syncing {len(seller_list)} sellers from page {page}")
-
-                for seller_data in seller_list:
-                    seller_code = seller_data.get('code')
-                    seller_name = seller_data.get('name')
-                    if not seller_code or not seller_name:
+                for s in seller_data_list:
+                    if not s.get('code') or not s.get('name'):
                         continue
-
-                    seller, created = Seller.objects.update_or_create(
-                        code=seller_code,
-                        defaults={
-                            'name': seller_name,
-                            'guid': str(uuid.uuid4()),
-                            'is_active': True,
-                            'created_at_api': timezone.now(),
-                            'updated_at_api': timezone.now(),
-                        }
-                    )
+                    seller, _ = Seller.objects.get_or_create(
+                        code=s['code'], defaults={'name': s['name']})
                     sellers.append(seller)
-                    log_line(
-                        f"{'✅ Created' if created else '🔄 Updated'} seller: {seller.name}")
 
                 if current_page >= last_page:
                     break
-
                 page += 1
 
             except requests.RequestException as e:
-                log_line(f'❌ Failed to fetch sellers: {str(e)}')
-                break
+                log(f"❌ Failed to fetch sellers: {str(e)}")
+                return
 
-        # Step 2: Sync Orders
-        total_orders = 0
+        # Step 2: Fetch orders for each seller
+        total_synced = 0
+
         for seller in sellers:
             if not seller.code:
-                log_line(f"⚠️ Skipping seller {seller.name} (missing code)")
+                log(f"⚠️ Skipping seller with missing code: {seller.name}")
                 continue
 
-            log_line(
-                f"📦 Syncing orders for seller: {seller.name} ({seller.code})")
             page = 1
+            log(f"📦 Syncing orders for seller: {seller.name} ({seller.code})")
 
             while True:
                 orders_url = f'https://prodapi.omniful.com/sales-channel/public/v1/tenants/sellers/{seller.code}/orders?page={page}&per_page=100'
@@ -108,22 +87,21 @@ class Command(BaseCommand):
                     meta = data.get('meta', {})
                     current_page = meta.get('current_page', page)
                     last_page = meta.get('last_page', 1)
-                    total_orders = meta.get('total', 0)
 
                     if not orders:
-                        log_line(
-                            f"✅ No orders for {seller.name} on page {page}")
+                        log(f"✅ No orders for {seller.name} on page {page}")
                         break
 
                     for order_data in orders:
-                        order_id = order_data.get('order_id')
                         omniful_id = order_data.get('id')
+                        order_id = order_data.get('order_id')
+
                         if not order_id or not omniful_id:
                             continue
 
                         try:
                             order_created_at = datetime.fromisoformat(
-                                order_data['order_created_at'].replace('Z', '+00:00'))
+                                order_data.get('order_created_at', '').replace('Z', '+00:00'))
                         except:
                             order_created_at = timezone.now()
 
@@ -139,7 +117,7 @@ class Command(BaseCommand):
                         billing = order_data.get('billing_address', {})
                         shipping = order_data.get('shipping_address', {})
 
-                        order, created = Order.objects.update_or_create(
+                        Order.objects.update_or_create(
                             omniful_id=omniful_id,
                             defaults={
                                 'order_id': order_id,
@@ -179,20 +157,31 @@ class Command(BaseCommand):
                             }
                         )
 
-                        log_line(
-                            f"{'✅ Created' if created else '🔄 Updated'} order: {order.order_id}")
-                        total_orders += 1
+                        total_synced += 1
+                        log(f"🔄 Synced order: {order_id}")
 
                     if current_page >= last_page:
                         break
                     page += 1
 
                 except requests.RequestException as e:
-                    log_line(
-                        f"❌ Failed to fetch orders for {seller.name}: {str(e)}")
+                    log(f"❌ Failed to fetch orders for {seller.name}: {str(e)}")
+                    break
+                except Exception as e:
+                    log(f"🔥 Error syncing order: {str(e)}")
+                    log(traceback.format_exc())
                     break
 
-        log_line(f"🎉 Orders sync complete. Total synced: {total_orders}")
-        if log_obj:
-            log_obj.completed = True
-            log_obj.save(update_fields=["completed", "log"])
+        log(f"\n✅ Orders sync completed. Total orders synced: {total_synced}")
+
+        # Save sync status timestamp
+        SyncStatus.objects.update_or_create(
+            key='orders',
+            defaults={'last_synced_at': timezone.now()}
+        )
+
+        # Save logs to DB
+        SyncLog.objects.update_or_create(
+            key='orders',
+            defaults={'content': '\n'.join(log_lines)}
+        )

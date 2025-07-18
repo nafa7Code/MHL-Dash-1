@@ -256,9 +256,17 @@ class Order(models.Model):
 
 
 class SyncLog(models.Model):
+    key = models.CharField(max_length=50)  # e.g. 'sellers'
+    content = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    log = models.TextField(blank=True)
-    completed = models.BooleanField(default=False)
-    user = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class SyncStatus(models.Model):
+    key = models.CharField(max_length=100, unique=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.key}: {self.last_synced_at}"
