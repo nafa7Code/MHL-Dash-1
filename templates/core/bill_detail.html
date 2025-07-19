@@ -12,9 +12,9 @@
         <p class="text-muted mb-0">{% trans "Vendor Bill Details" %}</p>
     </div>
     <div class="btn-group">
-        <button class="btn btn-primary refresh-bill-btn" data-bill-name="{{ bill.name }}">
+        <!-- <button class="btn btn-primary refresh-bill-btn" data-bill-name="{{ bill.name }}">
             <i class="fas fa-sync me-2"></i>{% trans "Refresh from API" %}
-        </button>
+        </button> -->
         <a href="{% url 'core:bills_list' %}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>{% trans "Back to Bills" %}
         </a>
@@ -51,7 +51,7 @@
                         <td class="fw-bold">{% trans "Grand Total:" %}</td>
                         <td>
                             {% if bill.grand_total %}
-                                <h5 class="text-success mb-0">${{ bill.grand_total|floatformat:2|intcomma }}</h5>
+                                <h5 class="text-success mb-0">{{ bill.grand_total|floatformat:2|intcomma }}</h5>
                             {% else %}
                                 <span class="text-muted">{% trans "Not available" %}</span>
                             {% endif %}
@@ -287,45 +287,13 @@
 </div>
 {% endif %}
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const refreshButton = document.querySelector('.refresh-bill-btn');
-    
-    if (refreshButton) {
-        refreshButton.addEventListener('click', function() {
-            const billName = this.dataset.billName;
-            const icon = this.querySelector('i');
-            
-            // Show loading state
-            icon.className = 'fas fa-spinner fa-spin';
-            this.disabled = true;
-            
-            fetch(`/api/refresh-bill/${billName}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'Content-Type': 'application/json',
-                },
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    LogisticsApp.showToast('success', data.message);
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    LogisticsApp.showToast('error', data.message);
-                }
-            })
-            .catch(error => {
-                LogisticsApp.showToast('error', 'Error refreshing bill');
-            })
-            .finally(() => {
-                // Reset button state
-                icon.className = 'fas fa-sync';
-                this.disabled = false;
-            });
-        });
-    }
-});
-</script>
+<!-- Raw Data -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{% trans "Raw Order Data" %}</h5>
+    </div>
+    <div class="card-body">
+        <pre class="bg-light p-3 rounded"><code>{{ raw_data }}</code></pre>
+    </div>
+</div>
 {% endblock %}

@@ -35,15 +35,14 @@
             <div class="card-body">
                 <p class="card-text">{% trans "Sync sellers from Omniful API" %}</p>
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="h4 mb-0 text-primary">{{ sellers_count|default:0|intcomma }}</span> {# Added default
-                    and intcomma filter #}
-                    <form method="post" action="{% url 'core:sync_sellers' %}" style="display: inline;">
+                    <span class="h4 mb-0 text-primary">{{ sellers_count|default:0|intcomma }}</span>
+                    <!-- <form method="post" action="{% url 'core:sync_sellers' %}" style="display: inline;">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-primary"
                             onclick="LogisticsApp.showButtonLoading(this, '{% trans " Syncing..." %}')">
                             <i class="fas fa-sync me-2"></i>{% trans "Sync Sellers" %}
                         </button>
-                    </form>
+                    </form> -->
                 </div>
             </div>
         </div>
@@ -59,9 +58,8 @@
             <div class="card-body">
                 <p class="card-text">{% trans "Import bills from Omniful API" %}</p>
                 <div class="d-flex justify-content-between align-items-center">
-                    <span class="h4 mb-0 text-success">{{ bills_count|default:0|intcomma }}</span> {# Added default and
-                    intcomma filter #}
-                    <div>
+                    <span class="h4 mb-0 text-success">{{ bills_count|default:0|intcomma }}</span>
+                    <!-- <div>
                         <form method="post" action="{% url 'core:sync_bills' %}" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-success"
@@ -72,7 +70,7 @@
                         <a href="{% url 'core:fix_all_dates' %}" class="btn btn-warning" style="margin-left: 5px;">
                             <i class="fas fa-calendar-check me-2"></i>{% trans "Fix Dates" %}
                         </a>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -90,13 +88,13 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="h4 mb-0 text-info">{{ orders_count|default:0|intcomma }}</span>
                     <div>
-                        <form method="post" action="{% url 'core:sync_orders' %}" style="display: inline;">
+                        <!-- <form method="post" action="{% url 'core:sync_orders' %}" style="display: inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-info"
                                 onclick="LogisticsApp.showButtonLoading(this, '{% trans " Syncing..." %}')">
                                 <i class="fas fa-sync me-2"></i>{% trans "Sync Orders" %}
                             </button>
-                        </form>
+                        </form> -->
                         <!-- <form method="post" action="{% url 'core:sync_all_orders' %}"
                             style="display: inline; margin-left: 5px;">
                             {% csrf_token %}
@@ -106,10 +104,10 @@
                             </button>
                         </form> -->
 
-                        <a href="{% url 'core:orders_dashboard' %}" class="btn btn-outline-info"
+                        <!-- <a href="{% url 'core:orders_dashboard' %}" class="btn btn-outline-info"
                             style="margin-left: 5px;">
                             <i class="fas fa-chart-line me-2"></i>{% trans "Dashboard" %}
-                        </a>
+                        </a> -->
                     </div>
                 </div>
             </div>

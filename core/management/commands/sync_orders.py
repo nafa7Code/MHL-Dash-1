@@ -24,6 +24,7 @@ class Command(BaseCommand):
             log("❌ OMNIFUL_ACCESS_TOKEN not set in .env file")
             return
 
+        total_created = total_updated = total_synced = 0
         headers = {
             'Authorization': f'Bearer {token}',
             'Content-Type': 'application/json'
@@ -65,9 +66,12 @@ class Command(BaseCommand):
                 return
 
         # Step 2: Fetch orders for each seller
-        total_created = total_updated = total_synced = 0
+<< << << < HEAD
+       total_created = total_updated = total_synced = 0
+== == == =
+>>>>>> > 8da4d44(update Ui/Ux, remove unnecessary buttons, update orders logic, accurate dummy data)
 
-        for seller in sellers:
+       for seller in sellers:
             if not seller.code:
                 log(f"⚠️ Skipping seller with missing code: {seller.name}")
                 continue

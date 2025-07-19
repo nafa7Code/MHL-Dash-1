@@ -73,13 +73,13 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">{% trans "Vendor Bills" %} ({{ bills_count }})</h5>
                 <div>
-                    <form class="d-inline" id="sync-bills-form" method="post" action="{% url 'core:sync_bills' %}">
+                    <!-- <form class="d-inline" id="sync-bills-form" method="post" action="{% url 'core:sync_bills' %}">
                         {% csrf_token %}
                         <button id="sync-bills-btn" type="submit" class="btn btn-primary" data-syncing="false">
                           <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
                           <span class="btn-label">{% trans "Sync Bills" %}</span>
                         </button>
-                      </form>
+                      </form> -->
                     
                       <button id="view-logs-btn" type="button" class="btn btn-outline-secondary d-none">
                         <i class="fas fa-terminal me-1"></i> {% trans "View Logs" %}

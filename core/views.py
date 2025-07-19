@@ -317,15 +317,55 @@ def orders_dashboard(request):
     avg_delivery_time = orders.exclude(days_to_deliver__isnull=True).aggregate(
         avg=Avg('days_to_deliver'))['avg'] or 0
 
-    # Delay metrics
-    delayed_orders = orders.filter(is_delayed=True).count()
-    on_time_rate = (total_orders - delayed_orders) / \
-        total_orders * 100 if total_orders > 0 else 0
-
     # Delay categories
-    green_orders = orders.filter(delay_category='green').count()
-    yellow_orders = orders.filter(delay_category='yellow').count()
-    red_orders = orders.filter(delay_category='red').count()
+    green_orders = (
+        orders
+        .annotate(
+            status_clean=Trim(Lower(F('status_code'))),
+            delivery_delay=ExpressionWrapper(
+                F('delivery_date') - F('order_created_at'),
+                output_field=DurationField()
+            )
+        )
+        .filter(
+            status_clean='delivered',
+            delivery_delay__lte=timedelta(days=5)
+        )
+        .order_by('-order_created_at')
+    ).count()
+
+    yellow_orders = (
+        orders
+        .annotate(
+            status_clean=Trim(Lower(F('status_code'))),
+            delivery_delay=ExpressionWrapper(
+                F('delivery_date') - F('order_created_at'),
+                output_field=DurationField()
+            )
+        )
+        .filter(
+            status_clean='delivered',
+            delivery_delay__gte=timedelta(days=6),
+            delivery_delay__lte=timedelta(days=10)
+        )
+        .order_by('-order_created_at')
+    ).count()
+
+    red_orders = (
+        orders
+        .annotate(
+            status_clean=Trim(Lower(F('status_code'))),
+            delivery_delay=ExpressionWrapper(
+                F('delivery_date') - F('order_created_at'),
+                output_field=DurationField()
+            )
+        )
+        .filter(
+            status_clean='delivered',
+            delivery_delay__gt=timedelta(days=10)
+        )
+        .order_by('-order_created_at')
+    ).count()
 
     # red_orders rows
     red_orders_qs = (
@@ -342,6 +382,11 @@ def orders_dashboard(request):
         )
         .order_by('-order_created_at')
     )
+
+    # Delay metrics
+    delayed_orders = yellow_orders + red_orders
+    on_time_rate = (total_orders - delayed_orders) / \
+        total_orders * 100 if total_orders > 0 else 0
 
     red_orders_count = red_orders_qs.count()
 
@@ -425,9 +470,12 @@ def seller_detail(request, guid):
 def bill_detail(request, name):
     """Bill detail page with full JSON data."""
     bill = get_object_or_404(VendorBill, name=name)
+
     context = {
         'bill': bill,
+        'raw_data': json.dumps(bill.raw_data, indent=2) if bill.raw_data else '{}',
     }
+
     return render(request, 'core/bill_detail.html', context)
 
 

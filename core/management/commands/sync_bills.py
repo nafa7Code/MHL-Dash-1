@@ -141,6 +141,7 @@ class Command(BaseCommand):
                                 'hub_bills': bill_data.get('hub_bills', []),
                                 'created_at_local': timezone.now(),
                                 'updated_at_local': timezone.now(),
+                                'raw_data': bill_detail,
                             }
                         )
 
