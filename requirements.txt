@@ -2,11 +2,7 @@ asgiref==3.9.1
 certifi==2025.7.14
 charset-normalizer==3.4.2
 dj-database-url==3.0.1
-<<<<<<< HEAD
-Django==4.2.13
-=======
 Django==4.2.11
->>>>>>> 8da4d44 (update Ui/Ux, remove unnecessary buttons, update orders logic, accurate dummy data)
 gunicorn==23.0.0
 idna==3.10
 packaging==25.0
