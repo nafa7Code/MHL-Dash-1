@@ -38,6 +38,8 @@ class Command(BaseCommand):
 
         headers = {'Authorization': f'Bearer {token}'}
 
+        total_created = total_updated = total_synced = 0
+
         # Step 1: Fetch all sellers from API
         sellers = []
         page = 1
@@ -116,7 +118,7 @@ class Command(BaseCommand):
 
                         bill_detail = detail_response.json().get('data', {})
 
-                        VendorBill.objects.update_or_create(
+                        bill, created = VendorBill.objects.update_or_create(
                             name=bill_name,
                             defaults={
                                 'seller': seller,
@@ -141,7 +143,14 @@ class Command(BaseCommand):
                                 'updated_at_local': timezone.now(),
                             }
                         )
-                        log(f"🔄 Synced bill: {bill_name}")
+
+                        if created:
+                            total_created += 1
+                            log(f'🧾 Created Bill: {bill.name}')
+                        else:
+                            total_updated += 1
+                            log(f'🔁 Updated Bill: {bill.name}')
+
                         total_synced += 1
 
                     if current_page >= last_page:
@@ -163,6 +172,14 @@ class Command(BaseCommand):
             key='vendor_bills',
             defaults={'last_synced_at': timezone.now()}
         )
+
+        summary = (
+            f"\n✅ Sync Complete!\n"
+            f"Created: {total_created}\n"
+            f"Updated: {total_updated}\n"
+            f"Total Synced: {total_synced}"
+        )
+        log(summary)
 
         # Save logs to DB
         SyncLog.objects.update_or_create(

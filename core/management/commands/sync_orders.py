@@ -65,7 +65,7 @@ class Command(BaseCommand):
                 return
 
         # Step 2: Fetch orders for each seller
-        total_synced = 0
+        total_created = total_updated = total_synced = 0
 
         for seller in sellers:
             if not seller.code:
@@ -117,7 +117,7 @@ class Command(BaseCommand):
                         billing = order_data.get('billing_address', {})
                         shipping = order_data.get('shipping_address', {})
 
-                        Order.objects.update_or_create(
+                        order, created = Order.objects.update_or_create(
                             omniful_id=omniful_id,
                             defaults={
                                 'order_id': order_id,
@@ -157,8 +157,16 @@ class Command(BaseCommand):
                             }
                         )
 
+                        if created:
+                            total_created += 1
+                            log(
+                                f'🆕 Created Order: {order.order_id} (Omniful ID: {order.omniful_id})')
+                        else:
+                            total_updated += 1
+                            log(
+                                f'♻️ Updated Order: {order.order_id} (Omniful ID: {order.omniful_id})')
+
                         total_synced += 1
-                        log(f"🔄 Synced order: {order_id}")
 
                     if current_page >= last_page:
                         break
@@ -179,6 +187,14 @@ class Command(BaseCommand):
             key='orders',
             defaults={'last_synced_at': timezone.now()}
         )
+
+        summary = (
+            f"\n✅ Sync Complete!\n"
+            f"Created: {total_created}\n"
+            f"Updated: {total_updated}\n"
+            f"Total Synced: {total_synced}"
+        )
+        log(summary)
 
         # Save logs to DB
         SyncLog.objects.update_or_create(
