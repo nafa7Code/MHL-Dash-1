@@ -135,7 +135,7 @@ class VendorBill(models.Model):
         auto_now_add=True)   # Timestamp when saved to your DB
     # Timestamp when last updated in your DB
     updated_at_local = models.DateTimeField(auto_now=True)
-    raw_data = models.JSONField(default=dict)
+    # raw_data = models.JSONField(default=dict)
 
     def __str__(self):
         return self.name

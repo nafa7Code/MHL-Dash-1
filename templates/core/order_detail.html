@@ -166,6 +166,7 @@
 </div>
 
 <!-- Raw Data -->
+{% if raw_data %}
 <div class="card">
     <div class="card-header">
         <h5 class="card-title mb-0">{% trans "Raw Order Data" %}</h5>
@@ -174,4 +175,6 @@
         <pre class="bg-light p-3 rounded"><code>{{ raw_data }}</code></pre>
     </div>
 </div>
+{% endif %}
+
 {% endblock %}
